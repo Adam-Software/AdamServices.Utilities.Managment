@@ -1,0 +1,21 @@
+{
+  /* service section */
+  "services": {
+    "name": "Managment",
+    /* service version */
+    "version": "1.0",
+    /* service dependencies on other services */
+    "dependencies": []
+  },
+
+  "compilerOptions": {
+    "serviceProjectPath": "/src/Services.Managment/**.csproj",
+    "serviceOutputPath": "",
+    "serviceBuildPath": "/usr/src/Services.Managment"
+  },
+  "systemd": {
+    /* if the parameter is empty, the service will not be installed. */
+    /* specifies the path to the .service unit file in the repository */
+    "serviceFilePath": ""
+  }
+}
