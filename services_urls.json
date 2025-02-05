@@ -1,13 +1,13 @@
 [
   {
     /* optional */
-    "service_name": "FindRobot",
+    "serviceName": "FindRobot",
 
     /* repo url*/
-    "service_url": "https://github.com/vertigra/Services.FindRobot"
+    "serviceUrl": "https://github.com/vertigra/Services.FindRobot"
   },
   {
-    "service_name": "",
-    "service_url": ""
+    "serviceName": "",
+    "serviceUrl": ""
   }
 ]
