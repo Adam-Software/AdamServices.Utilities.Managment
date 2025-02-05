@@ -65,6 +65,9 @@ namespace Managment.Services.Common
         private void OnStarted()
         {
             mLogger.LogTrace("4. OnStarted has been called.");
+
+            mCheckingUpdateService.PrintCheckUrl();
+            mCheckingUpdateService.CheckUpdate();
         }
 
         private void OnStopping()
@@ -76,6 +79,7 @@ namespace Managment.Services.Common
         public Task StoppingAsync(CancellationToken cancellationToken)
         {
             mLogger.LogTrace("6. StoppingAsync has been called.");
+
             return mCompletedTask;
         }
 
