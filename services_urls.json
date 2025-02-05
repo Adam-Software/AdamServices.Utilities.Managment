@@ -1,9 +1,6 @@
 [
   {
-    /* optional */
     "serviceName": "FindRobot",
-
-    /* repo url*/
     "serviceUrl": "https://github.com/vertigra/Services.FindRobot"
   },
   {
