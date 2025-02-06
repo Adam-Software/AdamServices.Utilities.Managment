@@ -66,7 +66,7 @@ namespace Managment.Services.Common
         {
             mLogger.LogTrace("4. OnStarted has been called.");
 
-            mCheckingUpdateService.PrintCheckUrl();
+            mCheckingUpdateService.PrintCheckUpdateUrl();
             mCheckingUpdateService.CheckUpdate();
         }
 

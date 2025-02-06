@@ -2,7 +2,7 @@
 {
     public interface ICheckingUpdateService
     {
-        public void PrintCheckUrl();
+        public void PrintCheckUpdateUrl();
         public void CheckUpdate();
     }
 }
