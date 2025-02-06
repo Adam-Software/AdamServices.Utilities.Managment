@@ -1,6 +1,6 @@
 [
   {
-    /* can be empty, but the URL will be read */
+    /* Can be empty, but the URL will be read */
     "serviceName": "FindRobot",
     "serviceUrl": "https://github.com/vertigra/Services.FindRobot"
   },
