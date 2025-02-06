@@ -1,3 +1,9 @@
+/ *
+  * serviceName - can be empty, but the URL will be read.
+  * serviceUrl - can be empty, but the URL will not be read
+  * /
+
+
 [
   {
     "serviceName": "FindRobot",
