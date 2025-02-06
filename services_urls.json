@@ -4,9 +4,9 @@
     "serviceName": "FindRobot1",
     
     /* it can be in the following formats:
-     * LinkToRepo: "https://github.com/vertigra/Services.FindRobot"
-     * LinkToRepoWithFile: "https://github.com/vertigra/Services.Managment/blob/master/service_info.json"
-     * LinkToRawFiles: "https://raw.githubusercontent.com/vertigra/Services.Managment/refs/heads/master/service_info.json"
+     * LinkToRepoWithFile: "https://github.com/vertigra/Services.Managment/blob/master/service_info.json" - correct format
+     * LinkToRepo: "https://github.com/vertigra/Services.FindRobot" - incorrect format, default paths 'blob/master/service_info.json' will be added to it.
+     * LinkToRawFiles: "https://raw.githubusercontent.com/vertigra/Services.Managment/refs/heads/master/service_info.json" - correct format
      */
     "serviceUrl": "https://github.com/vertigra/Services.FindRobot"
   },
