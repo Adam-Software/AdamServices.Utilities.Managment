@@ -1,11 +1,22 @@
 [
   {
     /* Can be empty, but the URL will be read */
-    "serviceName": "FindRobot",
+    "serviceName": "FindRobot1",
+    
+    /* it can be in the following formats:
+     * LinkToRepo: "https://github.com/vertigra/Services.FindRobot"
+     * LinkToRepoWithFile: "https://github.com/vertigra/Services.Managment/blob/master/service_info.json"
+     * LinkToRawFiles: "https://raw.githubusercontent.com/vertigra/Services.Managment/refs/heads/master/service_info.json"
+     */
     "serviceUrl": "https://github.com/vertigra/Services.FindRobot"
   },
   {
-    "serviceName": "",
-    "serviceUrl": ""
+    "serviceName": "FindRobot2",
+    "serviceUrl": "https://github.com/vertigra/Services.Managment/blob/master/service_info.json"
+  },
+  {
+     "serviceName": "FindRobot3",
+     "serviceUrl": "https://raw.githubusercontent.com/vertigra/Services.Managment/refs/heads/master/service_info.json"
   }
+  
 ]
