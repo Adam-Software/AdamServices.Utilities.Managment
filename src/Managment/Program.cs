@@ -1,12 +1,16 @@
-﻿using Managment.Core;
+﻿using Managment.Core.Services;
+using Managment.Core.SpectreConsole.Commands;
+using Managment.Core.SpectreConsole.Infrastructure;
 using Managment.Interface;
 using Managment.Services.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using Serilog;
 using Serilog.Core;
+using Spectre.Console.Cli;
 using System;
 using System.Threading.Tasks;
 
@@ -14,7 +18,7 @@ namespace Managment
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static int Main(string[] args)
         {
             IHost host = Host.CreateDefaultBuilder(args)
                     .ConfigureAppConfiguration((context, config) =>
@@ -40,13 +44,22 @@ namespace Managment
                         });
 
                         services.AddSingleton<ICheckingUpdateService, CheckingUpdateService>();
+                        
+                        services.AddCommandLine<DefaultCommand>(config =>
+                        {
+                            
+                            //config.SetApplicationName("Adam Service Managment");
+                            //config.SetApplicationVersion("1.0");
+                        });
+
                         services.AddHostedService<ProgramHostedService>();
                     })
-                    
+
                     .Build();
-
-            await host.RunAsync();
-
+            
+            host.WaitForShutdown();
+            return host.Run(args);
+            
 
         }
     }

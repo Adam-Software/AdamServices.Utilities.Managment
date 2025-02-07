@@ -8,12 +8,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Managment.Services.Common
 {
-    public sealed class CheckingUpdateService : ICheckingUpdateService
+    public class CheckingUpdateService : ICheckingUpdateService
     {
-
         #region Services
 
         private readonly ILogger<CheckingUpdateService> mLogger;
@@ -28,6 +28,12 @@ namespace Managment.Services.Common
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             ReadCommentHandling = JsonCommentHandling.Skip,
         };
+
+        #endregion
+
+        #region Events
+
+        public event UpdateUrlsListEventHandler RaiseUpdateUrlsListEvent;
 
         #endregion
 
@@ -50,44 +56,68 @@ namespace Managment.Services.Common
             mLogger.LogInformation("Check update urls is {urls}", mAppSettingsOptionsService.CheckUpdateUrl.ConvertGitHubLinkToRaw());
         }
 
-        public async void CheckUpdate()
+        public Task CheckUpdateAsync()
         {
-            using HttpClient client = new();
-            JsonSerializerOptions options = jsonSerializerOptions;
-
-            try
+            return Task.Run(async() => 
             {
-                var checkUpdateUrl = mAppSettingsOptionsService.CheckUpdateUrl.ConvertGitHubLinkToRaw();
-                string jsonResponse = await client.GetStringAsync(checkUpdateUrl);
+                using HttpClient client = new();
+                JsonSerializerOptions options = jsonSerializerOptions;
 
-                List<ServiceUrlModel> rawUpdateUrls = JsonSerializer.Deserialize<List<ServiceUrlModel>>(jsonResponse, options);
-
-                if (rawUpdateUrls.Count == 0) 
+                try
                 {
-                    mLogger.LogWarning("Service addresses were not found");
-                    return;
+                    var checkUpdateUrl = mAppSettingsOptionsService.CheckUpdateUrl.ConvertGitHubLinkToRaw();
+                    string jsonResponse = await client.GetStringAsync(checkUpdateUrl);
+
+                    List<ServiceUrlModel> rawUpdateUrls = JsonSerializer.Deserialize<List<ServiceUrlModel>>(jsonResponse, options);
+
+                    if (rawUpdateUrls.Count == 0)
+                    {
+                        mLogger.LogWarning("No repository addresses were found in the json source file located at the url {url} ", checkUpdateUrl);
+                        return;
+                    }
+
+                    List<ServiceUrlModel> updateUrls = RawUrlParser(rawUpdateUrls);
+
+                    if (updateUrls.Count == 0)
+                    {
+                        mLogger.LogWarning("After parsing the json located at the url {url} the repository addresses were not found.", checkUpdateUrl);
+                        return;
+                    }
+
+                    UpdateUrls = updateUrls;
+
+                    mLogger.LogInformation($"Findig url list:");
+
+                    foreach (var url in updateUrls)
+                    {
+                        mLogger.LogInformation("{serviceName} {serviceUrl}", url.ServiceName, url.ServiceUrl);
+                    }
+
                 }
-
-                var updateUrl = RawUrlParser(rawUpdateUrls);
-
-                if(updateUrl.Count == 0)
+                catch (Exception ex)
                 {
-                    mLogger.LogWarning("Service addresses were not found");
-                    return;
+                    mLogger.LogError("Error message {error}", ex.Message);
                 }
+            });
+        }
 
-                mLogger.LogInformation($"Findig url list:");
+        #endregion
 
-                foreach (var url in updateUrl) 
-                {
-                    mLogger.LogInformation("{serviceName} {serviceUrl}", url.ServiceName, url.ServiceUrl);
-                }
+        #region Public fields
 
-            }
-            catch (Exception ex) 
+        private List<ServiceUrlModel> serviceUrls = [];
+
+        public List<ServiceUrlModel> UpdateUrls 
+        { 
+            get => serviceUrls; 
+            private set
             {
-                mLogger.LogError("Error message {error}", ex.Message);
-            }
+                if (value == null)
+                    return;
+
+                serviceUrls = value;
+                OnRaiseUpdateUrlsListEvent();
+            } 
         }
 
         #endregion
@@ -138,5 +168,15 @@ namespace Managment.Services.Common
 
         #endregion
 
+
+        #region OnRaise events
+
+        protected virtual  void OnRaiseUpdateUrlsListEvent()
+        {
+            UpdateUrlsListEventHandler raiseEvents = RaiseUpdateUrlsListEvent;
+            raiseEvents?.Invoke(this);
+        }
+
+        #endregion
     }
 }

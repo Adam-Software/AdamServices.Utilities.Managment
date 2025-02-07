@@ -1,6 +1,6 @@
 ﻿using Managment.Interface;
 
-namespace Managment.Core
+namespace Managment.Core.Services
 {
     public class AppSettingsOptionsService : IAppSettingsOptionsService
     {
