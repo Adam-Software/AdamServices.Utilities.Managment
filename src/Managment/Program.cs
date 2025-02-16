@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Core;
+using Spectre.Console.Cli;
 using System;
 using System.Threading.Tasks;
 
@@ -16,7 +17,7 @@ namespace Managment
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static int Main(string[] args)
         {
             IHost host = Host.CreateDefaultBuilder(args)
                     .ConfigureAppConfiguration((context, config) =>
@@ -52,11 +53,12 @@ namespace Managment
 
                         services.AddHostedService<ProgramHostedService>();
                     })
-                    
+
                     .Build();
-
-            await host.RunAsync();
-
+            
+            host.WaitForShutdown();
+            return host.Run(args);
+            
 
         }
     }

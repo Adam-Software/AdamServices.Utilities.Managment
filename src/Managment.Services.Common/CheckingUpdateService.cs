@@ -11,9 +11,8 @@ using System.Threading.Tasks;
 
 namespace Managment.Services.Common
 {
-    public sealed class CheckingUpdateService : ICheckingUpdateService
+    public class CheckingUpdateService : ICheckingUpdateService
     {
-
         #region Services
 
         private readonly ILogger<CheckingUpdateService> mLogger;
@@ -27,6 +26,12 @@ namespace Managment.Services.Common
         const string cUniqueUrlListFileName = "uniqueUpdateUrls.json";
         const string cUrlListFileName = "updateUrls.json";
         const string cUrlWithNameListFileName = "repositoryUrlWithName.json";
+
+        #endregion
+
+        #region Events
+
+        public event UpdateUrlsListEventHandler RaiseUpdateUrlsListEvent;
 
         #endregion
 
@@ -197,5 +202,15 @@ namespace Managment.Services.Common
 
         #endregion
 
+
+        #region OnRaise events
+
+        protected virtual  void OnRaiseUpdateUrlsListEvent()
+        {
+            UpdateUrlsListEventHandler raiseEvents = RaiseUpdateUrlsListEvent;
+            raiseEvents?.Invoke(this);
+        }
+
+        #endregion
     }
 }
