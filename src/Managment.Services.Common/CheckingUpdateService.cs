@@ -105,7 +105,7 @@ namespace Managment.Services.Common
 
                 try
                 {
-                    serviceUrl = updateUrl.ServiceUrl.ConvertGitHubLinkToRaw();
+                    serviceUrl = updateUrl.ServiceGitUrl.ConvertGitHubLinkToRaw();
                 }
                 catch (ArgumentException ex)
                 {
