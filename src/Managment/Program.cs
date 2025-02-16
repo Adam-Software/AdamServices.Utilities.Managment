@@ -1,10 +1,12 @@
-﻿using Managment.Core;
+﻿using CommandLine;
+using Managment.Core;
 using Managment.Interface;
 using Managment.Services.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Core;
 using System;
@@ -25,8 +27,14 @@ namespace Managment
                     
                     .ConfigureServices((context, services) =>
                     {
+                        Parser.Default.ParseArguments<AppArguments>(args).WithParsed(appArgs =>
+                        {
+                            services.AddSingleton<IAppArguments>(appArgs);  
+                        });
+
                         AppSettingsOptionsService options = new();
                         context.Configuration.GetRequiredSection("AppSettingsOptions").Bind(options);
+
                         services.AddSingleton<IAppSettingsOptionsService>(options);
 
                         services.AddLogging(loggingBuilder =>
@@ -40,6 +48,8 @@ namespace Managment
                         });
 
                         services.AddSingleton<ICheckingUpdateService, CheckingUpdateService>();
+                        services.AddSingleton<IGitService, GitService>();
+
                         services.AddHostedService<ProgramHostedService>();
                     })
                     

@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Managment.Services.Common
 {
@@ -23,11 +23,10 @@ namespace Managment.Services.Common
 
         #region Var
 
-        private readonly JsonSerializerOptions jsonSerializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-        };
+        private readonly string mRepositoryPath = "jsonRepository";
+        const string cUniqueUrlListFileName = "uniqueUpdateUrls.json";
+        const string cUrlListFileName = "updateUrls.json";
+        const string cUrlWithNameListFileName = "repositoryUrlWithName.json";
 
         #endregion
 
@@ -38,6 +37,7 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<CheckingUpdateService>>();
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
 
+            mRepositoryPath = mAppSettingsOptionsService.JsonRepositoryPath;
             mLogger.LogInformation("Service run");
         }
 
@@ -50,44 +50,96 @@ namespace Managment.Services.Common
             mLogger.LogInformation("Check update urls is {urls}", mAppSettingsOptionsService.CheckUpdateUrl.ConvertGitHubLinkToRaw());
         }
 
-        public async void CheckUpdate()
+        public async Task CheckAndSaveUpdateListsAsync()
         {
-            using HttpClient client = new();
-            JsonSerializerOptions options = jsonSerializerOptions;
+            JsonRepository jsonRepository = new(mRepositoryPath);
+            List<ServiceNameWithUrl> serviceNameWithUrl = [];
+
 
             try
             {
+                jsonRepository.CreateOrClearRepositoryDirectory();
+
                 var checkUpdateUrl = mAppSettingsOptionsService.CheckUpdateUrl.ConvertGitHubLinkToRaw();
-                string jsonResponse = await client.GetStringAsync(checkUpdateUrl);
+                await jsonRepository.SaveJsonResponseAsync(cUrlListFileName, checkUpdateUrl);
 
-                List<ServiceUrlModel> rawUpdateUrls = JsonSerializer.Deserialize<List<ServiceUrlModel>>(jsonResponse, options);
+                List<ServiceUrlModel> rawUpdateUrls = await jsonRepository.ReadJsonFileAsync<List<ServiceUrlModel>>(cUrlListFileName);
+                List<ServiceUrlModel> convertUrls = RawUrlParser(rawUpdateUrls);
+                List<ServiceUrlModel> uniquensUrls = CheckUniquensUrls(convertUrls);
 
-                if (rawUpdateUrls.Count == 0) 
+                if (uniquensUrls.Count == 0)
                 {
                     mLogger.LogWarning("Service addresses were not found");
                     return;
                 }
 
-                var updateUrl = RawUrlParser(rawUpdateUrls);
+                jsonRepository.SerializeAndSaveServiceUrls(uniquensUrls, cUniqueUrlListFileName);
 
-                if(updateUrl.Count == 0)
+                foreach (ServiceUrlModel url in uniquensUrls)
                 {
-                    mLogger.LogWarning("Service addresses were not found");
-                    return;
+                    var fileName = $"{url.ServiceUrl.ConvertToRepositoryName()}.json";
+                    await jsonRepository.SaveJsonResponseAsync(fileName, url.ServiceUrl);
+                    mLogger.LogInformation("Json for service name in config {name} with url {url} saved with name {fileName}", url.ServiceName, url.ServiceUrl, url.ServiceUrl.ConvertToRepositoryName());
+                    
+                    ServiceNameWithUrl nameWithUrl = new()
+                    {
+                        ServiceInfoJsonUrl = url.ServiceUrl.ConvertRawUrlToGitUrl(),
+                        ServiceInfoServiceName = url.ServiceName
+                    };
+
+                    serviceNameWithUrl.Add(nameWithUrl);
+                    jsonRepository.SerializeAndSaveServiceNameWithUrls(serviceNameWithUrl, cUrlWithNameListFileName);
                 }
-
-                mLogger.LogInformation($"Findig url list:");
-
-                foreach (var url in updateUrl) 
-                {
-                    mLogger.LogInformation("{serviceName} {serviceUrl}", url.ServiceName, url.ServiceUrl);
-                }
-
             }
             catch (Exception ex) 
             {
                 mLogger.LogError("Error message {error}", ex.Message);
             }
+            finally
+            {
+               
+            }
+        }
+
+        public async Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync()
+        {
+            List<ServiceNameWithUrl> uniquensUrls = [];
+            JsonRepository jsonRepository = new(mRepositoryPath);
+
+            try
+            {
+                uniquensUrls = await jsonRepository.ReadJsonFileAsync<List<ServiceNameWithUrl>>(cUrlWithNameListFileName);
+                return uniquensUrls;
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+                return uniquensUrls;
+            }
+        }
+
+
+        public async Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync()
+        {
+            List<ServiceInfoModel> serviceInfos = [];
+            JsonRepository jsonRepository = new(mRepositoryPath);
+            
+            try
+            {
+                List<ServiceUrlModel> uniquensUrls = await jsonRepository.ReadJsonFileAsync<List<ServiceUrlModel>>(cUniqueUrlListFileName);
+
+                foreach (ServiceUrlModel url in uniquensUrls)
+                {
+                    ServiceInfoModel readJson = await jsonRepository.ReadJsonFileAsync<ServiceInfoModel>($"{url.ServiceUrl.ConvertToRepositoryName()}.json");
+                    serviceInfos.Add(readJson);   
+                }
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+        
+            return serviceInfos;
         }
 
         #endregion
@@ -105,7 +157,7 @@ namespace Managment.Services.Common
 
                 try
                 {
-                    serviceUrl = updateUrl.ServiceGitUrl.ConvertGitHubLinkToRaw();
+                    serviceUrl = updateUrl.ServiceUrl.ConvertGitHubLinkToRaw();
                 }
                 catch (ArgumentException ex)
                 {
@@ -126,7 +178,7 @@ namespace Managment.Services.Common
                     updateUrls.Add(new ServiceUrlModel 
                     { 
                         ServiceName = serviceName,  
-                        ServiceUrl = serviceUrl 
+                        ServiceUrl = serviceUrl
                     });
 
                     mLogger.LogTrace("Service url for service {name} is {url} added to list", serviceName, serviceUrl);
@@ -134,6 +186,13 @@ namespace Managment.Services.Common
             }
 
             return updateUrls;
+        }
+
+        private static List<ServiceUrlModel> CheckUniquensUrls(List<ServiceUrlModel> urls) 
+        {
+            return urls.GroupBy(model => model.ServiceUrl)
+                       .Select(group => group.First())
+                       .ToList();
         }
 
         #endregion

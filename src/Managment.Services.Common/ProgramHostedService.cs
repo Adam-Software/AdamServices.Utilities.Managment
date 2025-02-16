@@ -1,8 +1,11 @@
 ﻿using Managment.Interface;
+using Managment.Interface.CheckingUpdateServiceDependency;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +18,8 @@ namespace Managment.Services.Common
         private readonly ILogger<ProgramHostedService> mLogger;
         private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
         private readonly ICheckingUpdateService mCheckingUpdateService;
+        private readonly IAppArguments mAppArguments;
+        private readonly IGitService mGitService;
 
         #endregion
 
@@ -31,6 +36,8 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<ProgramHostedService>>();
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
             mCheckingUpdateService = serviceProvider.GetRequiredService<ICheckingUpdateService>();
+            mAppArguments = serviceProvider.GetRequiredService<IAppArguments>();
+            mGitService = serviceProvider.GetRequiredService<IGitService>();
 
             var appLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
 
@@ -62,12 +69,30 @@ namespace Managment.Services.Common
             return mCompletedTask;
         }
 
-        private void OnStarted()
+        private async void OnStarted()
         {
             mLogger.LogTrace("4. OnStarted has been called.");
 
-            mCheckingUpdateService.PrintCheckUpdateUrl();
-            mCheckingUpdateService.CheckUpdate();
+            mLogger.LogInformation("Install: {install}", mAppArguments.Install);
+
+            mLogger.LogInformation("Update: {update}", mAppArguments.Update);
+
+            if (mAppArguments.Update)
+            {
+                mCheckingUpdateService.PrintCheckUpdateUrl();
+                await mCheckingUpdateService.CheckAndSaveUpdateListsAsync();
+                List<ServiceNameWithUrl> results = await mCheckingUpdateService.ReadServiceNameWithUrlListAsync();
+
+
+                mGitService.Clone(results.FirstOrDefault().ServiceInfoJsonUrl);
+                /*foreach (var result in results)
+                {
+                    await mGitService.Clone(result.ServiceInfoJsonUrl);
+
+                    mLogger.LogInformation("{name}", result.ServiceInfoServiceName);
+                    mLogger.LogInformation("{version}", result.ServiceInfoJsonUrl);
+                }*/
+            }
         }
 
         private void OnStopping()
