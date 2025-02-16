@@ -149,6 +149,12 @@ namespace Managment.Services.Common
 
         #endregion
 
+        #region Public fields
+
+        public List<ServiceUrlModel> UpdateUrls => [];
+        
+        #endregion
+
         #region Private methods
 
         private List<ServiceUrlModel> RawUrlParser(List<ServiceUrlModel> rawUpdateUrls)
@@ -201,7 +207,6 @@ namespace Managment.Services.Common
         }
 
         #endregion
-
 
         #region OnRaise events
 

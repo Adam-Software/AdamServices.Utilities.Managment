@@ -25,5 +25,7 @@ namespace Managment.Interface
         public Task CheckAndSaveUpdateListsAsync();
         public Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync();
         public Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync();
+
+        #endregion
     }
 }

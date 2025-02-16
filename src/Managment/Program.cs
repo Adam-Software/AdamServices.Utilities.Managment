@@ -1,23 +1,21 @@
 ﻿using CommandLine;
 using Managment.Core;
+using Managment.Core.Services;
 using Managment.Interface;
 using Managment.Services.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Core;
-using Spectre.Console.Cli;
-using System;
 using System.Threading.Tasks;
 
 namespace Managment
 {
     internal class Program
     {
-        static int Main(string[] args)
+        static Task Main(string[] args)
         {
             IHost host = Host.CreateDefaultBuilder(args)
                     .ConfigureAppConfiguration((context, config) =>
@@ -56,8 +54,8 @@ namespace Managment
 
                     .Build();
             
-            host.WaitForShutdown();
-            return host.Run(args);
+            
+            return host.RunAsync();
             
 
         }
