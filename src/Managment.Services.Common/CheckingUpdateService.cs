@@ -42,7 +42,7 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<CheckingUpdateService>>();
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
 
-            mRepositoryPath = mAppSettingsOptionsService.JsonRepositoryPath;
+            //mRepositoryPath = mAppSettingsOptionsService.JsonRepositoryPath;
             mLogger.LogInformation("Service run");
         }
 
@@ -52,10 +52,19 @@ namespace Managment.Services.Common
 
         public void PrintCheckUpdateUrl()
         {
-            mLogger.LogInformation("Check update urls is {urls}", mAppSettingsOptionsService.CheckUpdateUrl.ConvertGitHubLinkToRaw());
+            mLogger.LogInformation("Check update repository list");
+
+            int i = 0;
+            foreach (var serviceRepository in mAppSettingsOptionsService.LocationsServiceRepositoryList) 
+            {
+                i++;
+                mLogger.LogInformation("{Counter}. {RepositoriesName} {RepositoriesOwner} {ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServicesListFilePath);
+            }
+            
+
         }
 
-        public async Task CheckAndSaveUpdateListsAsync()
+        /*public async Task CheckAndSaveUpdateListsAsync()
         {
             JsonRepository jsonRepository = new(mRepositoryPath);
             List<ServiceNameWithUrl> serviceNameWithUrl = [];
@@ -104,7 +113,7 @@ namespace Managment.Services.Common
             {
                
             }
-        }
+        }*/
 
         public async Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync()
         {

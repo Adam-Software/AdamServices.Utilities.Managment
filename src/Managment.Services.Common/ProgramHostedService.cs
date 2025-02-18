@@ -103,7 +103,7 @@ namespace Managment.Services.Common
             return mCompletedTask;
         }
 
-        private async void OnStarted()
+        private void OnStarted()
         {
             mLogger.LogTrace("4. OnStarted has been called.");
 
@@ -114,11 +114,11 @@ namespace Managment.Services.Common
             if (mAppArguments.Update)
             {
                 mCheckingUpdateService.PrintCheckUpdateUrl();
-                await mCheckingUpdateService.CheckAndSaveUpdateListsAsync();
-                List<ServiceNameWithUrl> results = await mCheckingUpdateService.ReadServiceNameWithUrlListAsync();
+                //await mCheckingUpdateService.CheckAndSaveUpdateListsAsync();
+                //List<ServiceNameWithUrl> results = await mCheckingUpdateService.ReadServiceNameWithUrlListAsync();
 
 
-                mGitService.Clone(results.FirstOrDefault().ServiceInfoJsonUrl);
+                //mGitService.Clone(results.FirstOrDefault().ServiceInfoJsonUrl);
                 /*foreach (var result in results)
                 {
                     await mGitService.Clone(result.ServiceInfoJsonUrl);

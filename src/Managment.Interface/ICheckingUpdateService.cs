@@ -22,9 +22,9 @@ namespace Managment.Interface
         #region Methods
 
         public void PrintCheckUpdateUrl();
-        public Task CheckAndSaveUpdateListsAsync();
-        public Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync();
-        public Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync();
+        //public Task CheckAndSaveUpdateListsAsync();
+        //public Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync();
+        //public Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync();
 
         #endregion
     }
