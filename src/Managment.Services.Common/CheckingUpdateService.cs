@@ -63,19 +63,32 @@ namespace Managment.Services.Common
             foreach (var serviceRepository in mAppSettingsOptionsService.LocationsServiceRepositoryList) 
             {
                 i++;
+                bool isSaved = false;
                 mLogger.LogInformation("{Counter}. {RepositoriesName} {RepositoriesOwner} {ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServicesListFilePath);
-                byte[] fileContent = await client.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
-                string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
                 string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.repositories.json";
-                bool isSaved = await jsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
-                
+     
+                try
+                {
+                    byte[] fileContent = await client.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
+                    string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);    
+                    isSaved = await jsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
+                }
+                catch (NotFoundException) 
+                {
+                    mLogger.LogError("The file was not found in this repository");
+                }
+                catch (Exception ex)
+                {
+                    mLogger.LogError("{exception}", ex);
+                }
+
                 if (isSaved)
                 {
                     mLogger.LogInformation("{filePath} saved!", $"{mRepositoryListPath}{Path.DirectorySeparatorChar}{fileName}");
                     return;
                 }
                 
-                mLogger.LogError("{filePath} saved!", $"{mRepositoryListPath}Path.DirectorySeparatorChar{fileName}");
+                mLogger.LogError("{filePath} not saved!", $"{mRepositoryListPath}Path.DirectorySeparatorChar{fileName}");
             }
         }
 
