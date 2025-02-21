@@ -3,9 +3,12 @@ using Managment.Interface.CheckingUpdateServiceDependency;
 using Managment.Interface.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Octokit;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -22,7 +25,7 @@ namespace Managment.Services.Common
 
         #region Var
 
-        private readonly string mRepositoryPath = "jsonRepository";
+        private readonly string mRepositoryListPath = "jsonRepository";
         const string cUniqueUrlListFileName = "uniqueUpdateUrls.json";
         const string cUrlListFileName = "updateUrls.json";
         const string cUrlWithNameListFileName = "repositoryUrlWithName.json";
@@ -42,7 +45,7 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<CheckingUpdateService>>();
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
 
-            //mRepositoryPath = mAppSettingsOptionsService.JsonRepositoryPath;
+            mRepositoryListPath = mAppSettingsOptionsService.RepositoryListDownloadPath;
             mLogger.LogInformation("Service run");
         }
 
@@ -50,18 +53,30 @@ namespace Managment.Services.Common
 
         #region Public methods
 
-        public void PrintCheckUpdateUrl()
+        public async void DownloadRepositoriesList()
         {
             mLogger.LogInformation("Check update repository list");
+            GitHubClient client = new(new ProductHeaderValue("vertigra.updater"));
+            JsonRepository jsonRepository = new(mRepositoryListPath);
 
             int i = 0;
             foreach (var serviceRepository in mAppSettingsOptionsService.LocationsServiceRepositoryList) 
             {
                 i++;
                 mLogger.LogInformation("{Counter}. {RepositoriesName} {RepositoriesOwner} {ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServicesListFilePath);
+                byte[] fileContent = await client.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
+                string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
+                string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.repositories.json";
+                bool isSaved = await jsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
+                
+                if (isSaved)
+                {
+                    mLogger.LogInformation("{filePath} saved!", $"{mRepositoryListPath}{Path.DirectorySeparatorChar}{fileName}");
+                    return;
+                }
+                
+                mLogger.LogError("{filePath} saved!", $"{mRepositoryListPath}Path.DirectorySeparatorChar{fileName}");
             }
-            
-
         }
 
         /*public async Task CheckAndSaveUpdateListsAsync()
@@ -118,7 +133,7 @@ namespace Managment.Services.Common
         public async Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync()
         {
             List<ServiceNameWithUrl> uniquensUrls = [];
-            JsonRepository jsonRepository = new(mRepositoryPath);
+            JsonRepository jsonRepository = new(mRepositoryListPath);
 
             try
             {
@@ -136,7 +151,7 @@ namespace Managment.Services.Common
         public async Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync()
         {
             List<ServiceInfoModel> serviceInfos = [];
-            JsonRepository jsonRepository = new(mRepositoryPath);
+            JsonRepository jsonRepository = new(mRepositoryListPath);
             
             try
             {
@@ -172,8 +187,8 @@ namespace Managment.Services.Common
 
             foreach (ServiceUrlModel updateUrl in rawUpdateUrls.Where(x => !string.IsNullOrEmpty(x.ServiceUrl)))
             {
-                var serviceName = updateUrl.ServiceName;
-                var serviceUrl = string.Empty;
+                string serviceName = updateUrl.ServiceName;
+                string serviceUrl = string.Empty;
 
                 try
                 {

@@ -21,7 +21,7 @@ namespace Managment.Interface
 
         #region Methods
 
-        public void PrintCheckUpdateUrl();
+        public void DownloadRepositoriesList();
         //public Task CheckAndSaveUpdateListsAsync();
         //public Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync();
         //public Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync();

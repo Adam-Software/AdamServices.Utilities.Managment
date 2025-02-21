@@ -6,8 +6,7 @@ namespace Managment.Core.Services
 {
     public class AppSettingsOptionsService : IAppSettingsOptionsService
     {
-        //public string CheckUpdateUrl { get; set; }
-        //public string JsonRepositoryPath {  get; set; }
+        public string RepositoryListDownloadPath { get; set; }
         public List<LocationsServiceRepositoryModel> LocationsServiceRepositoryList {  get; set; }
     }
 }

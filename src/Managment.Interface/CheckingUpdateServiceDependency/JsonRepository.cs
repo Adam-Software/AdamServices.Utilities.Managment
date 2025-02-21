@@ -31,7 +31,39 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         #endregion
 
-        public async Task SaveJsonResponseAsync(string fileName, string url)
+        public async Task<bool> SaveJsonFilesAsync(string content, string fileName)
+        {
+            try
+            {
+                if (!Directory.Exists(mRepositoryPath))
+                {
+                    Directory.CreateDirectory(mRepositoryPath);
+                }
+
+                string filePath = Path.Combine(mRepositoryPath, fileName);
+                await File.WriteAllTextAsync(filePath, content);
+                return true;
+            }
+            catch 
+            {
+                return false;
+            }
+        }
+
+        public async Task<T> ReadJsonFileAsync<T>(string fileName) where T : class
+        {
+            string filePath = Path.Combine(mRepositoryPath, fileName);
+
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException($"File not found: {filePath}", filePath);
+            }
+
+            string jsonString = await File.ReadAllTextAsync(filePath);
+            return JsonSerializer.Deserialize<T>(jsonString, jsonSerializerOptions);
+        }
+
+        /*public async Task SaveJsonResponseAsync(string fileName, string url)
         {
             if (!Directory.Exists(mRepositoryPath))
             {
@@ -83,7 +115,7 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
             string jsonString = await File.ReadAllTextAsync(filePath);
             return JsonSerializer.Deserialize<T>(jsonString, jsonSerializerOptions);
-        }
+        }*/
 
         public void CreateOrClearRepositoryDirectory()
         {

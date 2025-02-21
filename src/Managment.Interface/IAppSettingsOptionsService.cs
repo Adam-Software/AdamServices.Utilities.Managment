@@ -5,9 +5,7 @@ namespace Managment.Interface
 {
     public interface IAppSettingsOptionsService
     {
-        //public string CheckUpdateUrl { get; set; }
-        //public string JsonRepositoryPath { get; set; }
-
+        public string RepositoryListDownloadPath { get; set; }
         public List<LocationsServiceRepositoryModel> LocationsServiceRepositoryList { get; set; }
     }
 }

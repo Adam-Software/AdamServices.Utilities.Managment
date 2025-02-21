@@ -113,7 +113,7 @@ namespace Managment.Services.Common
 
             if (mAppArguments.Update)
             {
-                mCheckingUpdateService.PrintCheckUpdateUrl();
+                mCheckingUpdateService.DownloadRepositoriesList();
                 //await mCheckingUpdateService.CheckAndSaveUpdateListsAsync();
                 //List<ServiceNameWithUrl> results = await mCheckingUpdateService.ReadServiceNameWithUrlListAsync();
 
