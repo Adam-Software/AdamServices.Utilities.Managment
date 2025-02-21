@@ -1,6 +1,4 @@
-﻿using Managment.Interface.CheckingUpdateServiceDependency;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace Managment.Interface
 {
@@ -15,16 +13,13 @@ namespace Managment.Interface
 
         #region Fields
 
-        public List<ServiceUrlModel> UpdateUrls { get; }
-
         #endregion
 
         #region Methods
 
-        public void DownloadRepositoriesList();
-        //public Task CheckAndSaveUpdateListsAsync();
-        //public Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync();
-        //public Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync();
+        public Task DownloadRepositoriesListAsync();
+        public Task CheckRepositoriesListAsync();
+        public Task DownloadRepositoriesInfoAsync();
 
         #endregion
     }

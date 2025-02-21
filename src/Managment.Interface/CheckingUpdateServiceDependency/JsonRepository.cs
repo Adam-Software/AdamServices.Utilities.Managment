@@ -31,23 +31,15 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         #endregion
 
-        public async Task<bool> SaveJsonFilesAsync(string content, string fileName)
+        public async Task SaveJsonFilesAsync(string content, string fileName)
         {
-            try
+            if (!Directory.Exists(mRepositoryPath))
             {
-                if (!Directory.Exists(mRepositoryPath))
-                {
-                    Directory.CreateDirectory(mRepositoryPath);
-                }
+                Directory.CreateDirectory(mRepositoryPath);
+            }
 
-                string filePath = Path.Combine(mRepositoryPath, fileName);
-                await File.WriteAllTextAsync(filePath, content);
-                return true;
-            }
-            catch 
-            {
-                return false;
-            }
+            string filePath = Path.Combine(mRepositoryPath, fileName);
+            await File.WriteAllTextAsync(filePath, content);
         }
 
         public async Task<T> ReadJsonFileAsync<T>(string fileName) where T : class

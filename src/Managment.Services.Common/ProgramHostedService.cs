@@ -68,7 +68,7 @@ namespace Managment.Services.Common
 
         private void RaiseUpdateUrlsListEvent(object sender)
         {
-            List<ServiceUrlModel> tempUrls = mCheckingUpdateService.UpdateUrls;
+            /*List<ServiceUrlModel> tempUrls = mCheckingUpdateService.UpdateUrls;
 
             mLogger.LogTrace("UpdateUrlsListEvent raised");
 
@@ -77,7 +77,7 @@ namespace Managment.Services.Common
             foreach (ServiceUrlModel url in tempUrls) 
             {
                 mLogger.LogTrace("{serviceName}{serviceUrl}", url.ServiceName, url.ServiceUrl);
-            }
+            }*/
         }
 
         #endregion
@@ -103,7 +103,7 @@ namespace Managment.Services.Common
             return mCompletedTask;
         }
 
-        private void OnStarted()
+        private async void OnStarted()
         {
             mLogger.LogTrace("4. OnStarted has been called.");
 
@@ -113,7 +113,10 @@ namespace Managment.Services.Common
 
             if (mAppArguments.Update)
             {
-                mCheckingUpdateService.DownloadRepositoriesList();
+                await mCheckingUpdateService.DownloadRepositoriesListAsync();
+                await mCheckingUpdateService.CheckRepositoriesListAsync();
+                await mCheckingUpdateService.DownloadRepositoriesInfoAsync();
+
                 //await mCheckingUpdateService.CheckAndSaveUpdateListsAsync();
                 //List<ServiceNameWithUrl> results = await mCheckingUpdateService.ReadServiceNameWithUrlListAsync();
 

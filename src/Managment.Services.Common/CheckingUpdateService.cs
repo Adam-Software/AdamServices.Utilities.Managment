@@ -1,16 +1,14 @@
 ﻿using Managment.Interface;
+using Managment.Interface.AppSettingsOptionsServiceDependency;
 using Managment.Interface.CheckingUpdateServiceDependency;
-using Managment.Interface.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
+
 
 namespace Managment.Services.Common
 {
@@ -26,9 +24,17 @@ namespace Managment.Services.Common
         #region Var
 
         private readonly string mRepositoryListPath = "jsonRepository";
-        const string cUniqueUrlListFileName = "uniqueUpdateUrls.json";
-        const string cUrlListFileName = "updateUrls.json";
-        const string cUrlWithNameListFileName = "repositoryUrlWithName.json";
+        private readonly GitHubClient mGitHubClient;
+        private readonly JsonRepository mJsonRepository;
+        //const string cUniqueUrlListFileName = "uniqueUpdateUrls.json";
+        //const string cUrlListFileName = "updateUrls.json";
+        //const string cUrlWithNameListFileName = "repositoryUrlWithName.json";
+
+        #endregion
+
+        #region const
+
+        private const string cProductHeaderValue = "Adam.Services.Managment";
 
         #endregion
 
@@ -46,6 +52,10 @@ namespace Managment.Services.Common
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
 
             mRepositoryListPath = mAppSettingsOptionsService.RepositoryListDownloadPath;
+            mGitHubClient = new(new ProductHeaderValue(cProductHeaderValue));
+            mJsonRepository = new(mRepositoryListPath);
+
+            ServiceRepositories = [];
             mLogger.LogInformation("Service run");
         }
 
@@ -53,42 +63,121 @@ namespace Managment.Services.Common
 
         #region Public methods
 
-        public async void DownloadRepositoriesList()
+        public async Task DownloadRepositoriesListAsync()
         {
-            mLogger.LogInformation("Check update repository list");
-            GitHubClient client = new(new ProductHeaderValue("vertigra.updater"));
-            JsonRepository jsonRepository = new(mRepositoryListPath);
-
+            mLogger.LogInformation("=== Step 1. Download Repositories List ===");
+            
             int i = 0;
-            foreach (var serviceRepository in mAppSettingsOptionsService.LocationsServiceRepositoryList) 
+
+            var tempRepositoryList = new List<ServiceRepositoryModel>(mAppSettingsOptionsService.LocationsServiceRepositoryList);
+            foreach (ServiceRepositoryModel serviceRepository in tempRepositoryList)
             {
                 i++;
-                bool isSaved = false;
-                mLogger.LogInformation("{Counter}. {RepositoriesName} {RepositoriesOwner} {ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServicesListFilePath);
+                bool savedWithException = false;
+                mLogger.LogInformation("{Counter}. Download repositories list from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServicesListFilePath);
                 string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.repositories.json";
      
                 try
                 {
-                    byte[] fileContent = await client.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
+                    byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
                     string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);    
-                    isSaved = await jsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
+                    await mJsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
                 }
                 catch (NotFoundException) 
                 {
-                    mLogger.LogError("The file was not found in this repository");
+                    
+                    mLogger.LogError("{counter}. The file or repository not found and removed from repositories list", i);
+                    mAppSettingsOptionsService.LocationsServiceRepositoryList.Remove(serviceRepository);
+
+                    savedWithException = true;
+                }
+                catch (Exception ex)
+                {
+                    mLogger.LogError("{counter}. {exception}", i, ex);
+                    mAppSettingsOptionsService.LocationsServiceRepositoryList.Remove(serviceRepository);
+
+                    savedWithException = true;
+                }
+                finally
+                {
+                    if (!savedWithException)
+                        mLogger.LogInformation("{counter}. {filePath} saved!", i, $"{mRepositoryListPath}{Path.DirectorySeparatorChar}{fileName}");
+                }   
+            }
+        }
+
+        public async Task CheckRepositoriesListAsync()
+        {
+            mLogger.LogInformation("=== Step 2. Check Repositories Info Files ===");
+            
+            foreach (ServiceRepositoryModel serviceRepository in mAppSettingsOptionsService.LocationsServiceRepositoryList)
+            {
+                string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.repositories.json";
+                List<ServiceRepositoryModel> repositories = [];
+                bool readWithException = false;
+
+                try
+                {
+                    repositories = await mJsonRepository.ReadJsonFileAsync<List<ServiceRepositoryModel>>(fileName);
+                }
+                catch (FileNotFoundException)
+                {
+                    mLogger.LogError("The file {filename} was not found", fileName);
+                    readWithException = true;
                 }
                 catch (Exception ex)
                 {
                     mLogger.LogError("{exception}", ex);
+                    readWithException = true;
                 }
-
-                if (isSaved)
+                finally
                 {
-                    mLogger.LogInformation("{filePath} saved!", $"{mRepositoryListPath}{Path.DirectorySeparatorChar}{fileName}");
-                    return;
+                    if (!readWithException)
+                    {
+                        foreach (var repository in repositories)
+                        {
+                            mLogger.LogTrace("RepositoriesName: {RepositoriesName} RepositoriesOwner: {RepositoriesOwner} read and added to download list", repository.RepositoriesName, repository.RepositoriesOwner);
+                            ServiceRepositories.Add(repository);
+                        }
+                    }
                 }
-                
-                mLogger.LogError("{filePath} not saved!", $"{mRepositoryListPath}Path.DirectorySeparatorChar{fileName}");
+            }
+        }
+
+        public async Task DownloadRepositoriesInfoAsync()
+        {
+            mLogger.LogInformation("=== Step 3. Download Service Info Files ===");
+
+            int i = 0;
+            foreach (ServiceRepositoryModel serviceRepository in ServiceRepositories)
+            {
+                i++;
+
+                bool savedWithException = false;
+                string filePath = "service_info.json";
+
+                if (!string.IsNullOrEmpty(serviceRepository.ServicesListFilePath))
+                    filePath = serviceRepository.ServicesListFilePath;
+
+                mLogger.LogInformation("{Counter}. Start download service info file from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, filePath);
+                string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.service.info.json";
+                try
+                {
+                    byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, filePath);
+                    string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
+                    await mJsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
+
+                }
+                catch (Exception ex) 
+                {
+                    savedWithException = true;
+                    mLogger.LogError("{exception}", ex);
+                }
+                finally
+                {
+                    if (!savedWithException)
+                        mLogger.LogInformation("{сounter}. Download service info file and save as {filename} ", i, fileName);
+                }
             }
         }
 
@@ -143,7 +232,7 @@ namespace Managment.Services.Common
             }
         }*/
 
-        public async Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync()
+        /*public async Task<List<ServiceNameWithUrl>> ReadServiceNameWithUrlListAsync()
         {
             List<ServiceNameWithUrl> uniquensUrls = [];
             JsonRepository jsonRepository = new(mRepositoryListPath);
@@ -158,10 +247,10 @@ namespace Managment.Services.Common
                 mLogger.LogError("{error}", ex.Message);
                 return uniquensUrls;
             }
-        }
+        }*/
 
 
-        public async Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync()
+        /*public async Task<List<ServiceInfoModel>> ReadServiceUpdateListsAsync()
         {
             List<ServiceInfoModel> serviceInfos = [];
             JsonRepository jsonRepository = new(mRepositoryListPath);
@@ -182,66 +271,68 @@ namespace Managment.Services.Common
             }
         
             return serviceInfos;
-        }
+        }*/
 
         #endregion
 
         #region Public fields
 
-        public List<ServiceUrlModel> UpdateUrls => [];
-        
+        public List<ServiceRepositoryModel> ServiceRepositories { get;  set; } 
+
+        //public List<ServiceUrlModel> UpdateUrls => [];
+
         #endregion
 
         #region Private methods
 
-        private List<ServiceUrlModel> RawUrlParser(List<ServiceUrlModel> rawUpdateUrls)
-        {
-            List<ServiceUrlModel> updateUrls = [];
+        /*private List<ServiceUrlModel> RawUrlParser(List<ServiceUrlModel> rawUpdateUrls)
+         {
+             List<ServiceUrlModel> updateUrls = [];
 
-            foreach (ServiceUrlModel updateUrl in rawUpdateUrls.Where(x => !string.IsNullOrEmpty(x.ServiceUrl)))
-            {
-                string serviceName = updateUrl.ServiceName;
-                string serviceUrl = string.Empty;
+             foreach (ServiceUrlModel updateUrl in rawUpdateUrls.Where(x => !string.IsNullOrEmpty(x.ServiceUrl)))
+             {
+                 string serviceName = updateUrl.ServiceName;
+                 string serviceUrl = string.Empty;
 
-                try
-                {
-                    serviceUrl = updateUrl.ServiceUrl.ConvertGitHubLinkToRaw();
-                }
-                catch (ArgumentException ex)
-                {
-                    mLogger.LogWarning("Service url for service name {serviceName} in incorrect format. Try convert with default path arguments", serviceName);
+                 try
+                 {
+                     serviceUrl = updateUrl.ServiceUrl.ConvertGitHubLinkToRaw();
+                 }
+                 catch (ArgumentException ex)
+                 {
+                     mLogger.LogWarning("Service url for service name {serviceName} in incorrect format. Try convert with default path arguments", serviceName);
 
-                    if (ex.Message == "Invalid GitHubUserContent argument format")
-                        mLogger.LogError("{error}", ex.Message);
+                     if (ex.Message == "Invalid GitHubUserContent argument format")
+                         mLogger.LogError("{error}", ex.Message);
 
-                    if (ex.Message == "Invalid GitHub argument format")
-                        serviceUrl = $"{updateUrl.ServiceUrl}/blob/master/service_info.json".ConvertGitHubLinkToRaw();
+                     if (ex.Message == "Invalid GitHub argument format")
+                         serviceUrl = $"{updateUrl.ServiceUrl}/blob/master/service_info.json".ConvertGitHubLinkToRaw();
 
-                    if (string.IsNullOrEmpty(serviceUrl))
-                        mLogger.LogWarning("Convert with default path arguments for service name {serviceName} fails", serviceName);
-                }
+                     if (string.IsNullOrEmpty(serviceUrl))
+                         mLogger.LogWarning("Convert with default path arguments for service name {serviceName} fails", serviceName);
+                 }
 
-                if (!string.IsNullOrEmpty(serviceUrl))
-                {
-                    updateUrls.Add(new ServiceUrlModel 
-                    { 
-                        ServiceName = serviceName,  
-                        ServiceUrl = serviceUrl
-                    });
+                 if (!string.IsNullOrEmpty(serviceUrl))
+                 {
+                     updateUrls.Add(new ServiceUrlModel 
+                     { 
+                         ServiceName = serviceName,  
+                         ServiceUrl = serviceUrl
+                     });
 
-                    mLogger.LogTrace("Service url for service {name} is {url} added to list", serviceName, serviceUrl);
-                }
-            }
+                     mLogger.LogTrace("Service url for service {name} is {url} added to list", serviceName, serviceUrl);
+                 }
+             }
 
-            return updateUrls;
-        }
+             return updateUrls;
+         }*/
 
-        private static List<ServiceUrlModel> CheckUniquensUrls(List<ServiceUrlModel> urls) 
+        /*private static List<ServiceUrlModel> CheckUniquensUrls(List<ServiceUrlModel> urls) 
         {
             return urls.GroupBy(model => model.ServiceUrl)
                        .Select(group => group.First())
                        .ToList();
-        }
+        }*/
 
         #endregion
 

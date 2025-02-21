@@ -7,6 +7,6 @@ namespace Managment.Core.Services
     public class AppSettingsOptionsService : IAppSettingsOptionsService
     {
         public string RepositoryListDownloadPath { get; set; }
-        public List<LocationsServiceRepositoryModel> LocationsServiceRepositoryList {  get; set; }
+        public List<ServiceRepositoryModel> LocationsServiceRepositoryList {  get; set; }
     }
 }
