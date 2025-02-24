@@ -8,7 +8,7 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
     {
         #region Var
 
-        private readonly string mRepositoryPath;
+        private readonly string mInfoDownloadPath;
 
         private readonly JsonSerializerOptions mJsonSerializerOptions = new()
         {
@@ -23,8 +23,14 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         public JsonRepository(string repositoryPath)
         {
-            mRepositoryPath = repositoryPath;
+            mInfoDownloadPath = repositoryPath;
         }
+
+        #endregion
+
+        #region Public Fields
+
+        public string InfoDownloadPath => mInfoDownloadPath;
 
         #endregion
 
@@ -32,23 +38,23 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         public async Task SaveRawJsonFilesAsync(string content, string fileName)
         {
-            if (!Directory.Exists(mRepositoryPath))
+            if (!Directory.Exists(mInfoDownloadPath))
             {
-                Directory.CreateDirectory(mRepositoryPath);
+                Directory.CreateDirectory(mInfoDownloadPath);
             }
 
-            string filePath = Path.Combine(mRepositoryPath, fileName);
+            string filePath = Path.Combine(mInfoDownloadPath, fileName);
             await File.WriteAllTextAsync(filePath, content);
         }
 
         public async Task SerializeAndSaveJsonFilesAsync<T>(T content, string fileName) where T : class
         {
-            if (!Directory.Exists(mRepositoryPath))
+            if (!Directory.Exists(mInfoDownloadPath))
             {
-                Directory.CreateDirectory(mRepositoryPath);
+                Directory.CreateDirectory(mInfoDownloadPath);
             }
 
-            string filePath = Path.Combine(mRepositoryPath, fileName);
+            string filePath = Path.Combine(mInfoDownloadPath, fileName);
 
             string jsonString = JsonSerializer.Serialize<T>(content, mJsonSerializerOptions);
             await File.WriteAllTextAsync(filePath, jsonString);
@@ -56,7 +62,7 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         public async Task<T> ReadJsonFileAsync<T>(string fileName) where T : class
         {
-            string filePath = Path.Combine(mRepositoryPath, fileName);
+            string filePath = Path.Combine(mInfoDownloadPath, fileName);
 
             if (!File.Exists(filePath))
             {
@@ -69,13 +75,13 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         public void CreateOrClearRepositoryDirectory()
         {
-            if (!Directory.Exists(mRepositoryPath))
+            if (!Directory.Exists(mInfoDownloadPath))
             {
-                Directory.CreateDirectory(mRepositoryPath);
+                Directory.CreateDirectory(mInfoDownloadPath);
                 return;
             }
 
-            string[] files = Directory.GetFiles(mRepositoryPath);
+            string[] files = Directory.GetFiles(mInfoDownloadPath);
             foreach (string file in files)
             {
                 File.Delete(file);

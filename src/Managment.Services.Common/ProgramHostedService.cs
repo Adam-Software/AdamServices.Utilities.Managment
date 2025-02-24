@@ -50,15 +50,29 @@ namespace Managment.Services.Common
 
         private void Subscribe()
         {
+            mCheckingUpdateService.RaiseDownloadAndCheckUpdateStartedEvent += RaiseDownloadAndCheckUpdateStartedEvent;
+            mCheckingUpdateService.RaiseDownloadAndCheckUpdateFinishedEvent += RaiseDownloadAndCheckUpdateFinishedEvent;
         }
 
         private void Unsubscribe()
-        {   
+        {
+            mCheckingUpdateService.RaiseDownloadAndCheckUpdateStartedEvent -= RaiseDownloadAndCheckUpdateStartedEvent;
+            mCheckingUpdateService.RaiseDownloadAndCheckUpdateFinishedEvent -= RaiseDownloadAndCheckUpdateFinishedEvent;
         }
 
         #endregion
 
         #region Events
+
+        private void RaiseDownloadAndCheckUpdateStartedEvent(object sender)
+        {
+            mLogger.LogTrace("=== Raise DownloadAndCheckUpdateStarted Event ===");
+        }
+
+        private void RaiseDownloadAndCheckUpdateFinishedEvent(object sender)
+        {
+            mLogger.LogTrace("=== Raise DownloadAndCheckUpdateStarted Event ===");
+        }
 
         #endregion
 
@@ -106,15 +120,14 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in installation mode");
 
-                await mCheckingUpdateService.DownloadRepositoriesListAsync();
-                await mCheckingUpdateService.CheckRepositoriesListAsync();
-                await mCheckingUpdateService.DownloadRepositoriesInfoAsync();
+                await mCheckingUpdateService.DownloadAndCheckUpdateInfoFiles();
             }
         }
 
         private void OnStopping()
         {
             Unsubscribe();
+            mCheckingUpdateService.Dispose();
 
             mLogger.LogTrace("5. OnStopping has been called.");
         }
