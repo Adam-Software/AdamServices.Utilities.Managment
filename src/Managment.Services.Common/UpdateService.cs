@@ -12,11 +12,11 @@ using System.Threading.Tasks;
 
 namespace Managment.Services.Common
 {
-    public class CheckingUpdateService : ICheckingUpdateService
+    public class UpdateService : IUpdateService
     {
         #region Services
 
-        private readonly ILogger<CheckingUpdateService> mLogger;
+        private readonly ILogger<UpdateService> mLogger;
         private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
 
         #endregion
@@ -26,10 +26,12 @@ namespace Managment.Services.Common
         private readonly string mRepositoryListPath = "jsonRepository";
         private readonly GitHubClient mGitHubClient;
         private readonly JsonRepository mJsonRepository;
+        private readonly List<ServiceRepositoryModel> mServiceRepositories;
+
 
         #endregion
 
-        #region const
+        #region Const
 
         private const string cProductHeaderValue = "Adam.Services.Managment";
 
@@ -43,17 +45,17 @@ namespace Managment.Services.Common
 
         #region ~
 
-        public CheckingUpdateService(IServiceProvider serviceProvider) 
+        public UpdateService(IServiceProvider serviceProvider) 
         {
-            mLogger = serviceProvider.GetRequiredService<ILogger<CheckingUpdateService>>();
+            mLogger = serviceProvider.GetRequiredService<ILogger<UpdateService>>();
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
 
             mRepositoryListPath = mAppSettingsOptionsService.RepositoryListDownloadPath;
             mGitHubClient = new(new ProductHeaderValue(cProductHeaderValue));
             mJsonRepository = new(mRepositoryListPath);
 
-            ServiceRepositories = [];
-            mLogger.LogInformation("Service run");
+            mServiceRepositories = [];
+            mLogger.LogInformation("Service started");
         }
 
         #endregion
@@ -65,8 +67,8 @@ namespace Managment.Services.Common
             mLogger.LogInformation("=== Step 1. Download Repositories List ===");
             
             int i = 0;
+            List<ServiceRepositoryModel> tempRepositoryList = new(mAppSettingsOptionsService.LocationsServiceRepositoryList);
 
-            var tempRepositoryList = new List<ServiceRepositoryModel>(mAppSettingsOptionsService.LocationsServiceRepositoryList);
             foreach (ServiceRepositoryModel serviceRepository in tempRepositoryList)
             {
                 i++;
@@ -78,7 +80,7 @@ namespace Managment.Services.Common
                 {
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
                     string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);    
-                    await mJsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
+                    await mJsonRepository.SaveRawJsonFilesAsync(serviceRepositoriesList, fileName);
                 }
                 catch (NotFoundException) 
                 {
@@ -101,6 +103,8 @@ namespace Managment.Services.Common
                         mLogger.LogInformation("{counter}. {filePath} saved!", i, $"{mRepositoryListPath}{Path.DirectorySeparatorChar}{fileName}");
                 }   
             }
+
+            mLogger.LogInformation("=== Step 1. Download Repositories Finished ===");
         }
 
         public async Task CheckRepositoriesListAsync()
@@ -134,19 +138,23 @@ namespace Managment.Services.Common
                         foreach (var repository in repositories)
                         {
                             mLogger.LogTrace("RepositoriesName: {RepositoriesName} RepositoriesOwner: {RepositoriesOwner} read and added to download list", repository.RepositoriesName, repository.RepositoriesOwner);
-                            ServiceRepositories.Add(repository);
+                            mServiceRepositories.Add(repository);
                         }
                     }
                 }
             }
+
+            mLogger.LogInformation("=== Step 2. Check Repositories Info Files Finished ===");
         }
 
         public async Task DownloadRepositoriesInfoAsync()
         {
             mLogger.LogInformation("=== Step 3. Download Service Info Files ===");
 
+            List<string> serviceInfoFiles = [];
             int i = 0;
-            foreach (ServiceRepositoryModel serviceRepository in ServiceRepositories)
+
+            foreach (ServiceRepositoryModel serviceRepository in mServiceRepositories)
             {
                 i++;
 
@@ -158,11 +166,12 @@ namespace Managment.Services.Common
 
                 mLogger.LogInformation("{Counter}. Start download service info file from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, filePath);
                 string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.service.info.json";
+                
                 try
                 {
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, filePath);
                     string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
-                    await mJsonRepository.SaveJsonFilesAsync(serviceRepositoriesList, fileName);
+                    await mJsonRepository.SaveRawJsonFilesAsync(serviceRepositoriesList, fileName);
 
                 }
                 catch (Exception ex) 
@@ -173,71 +182,31 @@ namespace Managment.Services.Common
                 finally
                 {
                     if (!savedWithException)
+                    {
                         mLogger.LogInformation("{сounter}. Download service info file and save as {filename} ", i, fileName);
+                        serviceInfoFiles.Add(fileName);
+                    }
+                }
+
+                if (serviceInfoFiles.Count > 0)
+                {
+                    await mJsonRepository.SerializeAndSaveJsonFilesAsync(serviceInfoFiles, "service.info.files.json");
+                    mLogger.LogInformation("{сounter}. Download service info file {filename} added to download list {downloadList}", i, fileName, "service.info.files.json");
                 }
             }
+
+            mLogger.LogInformation("=== Step 3. Download Service Info Files Finished ===");
         }
 
         #endregion
 
         #region Public fields
 
-        public List<ServiceRepositoryModel> ServiceRepositories { get;  set; } 
-
-        //public List<ServiceUrlModel> UpdateUrls => [];
+        
 
         #endregion
 
         #region Private methods
-
-        /*private List<ServiceUrlModel> RawUrlParser(List<ServiceUrlModel> rawUpdateUrls)
-         {
-             List<ServiceUrlModel> updateUrls = [];
-
-             foreach (ServiceUrlModel updateUrl in rawUpdateUrls.Where(x => !string.IsNullOrEmpty(x.ServiceUrl)))
-             {
-                 string serviceName = updateUrl.ServiceName;
-                 string serviceUrl = string.Empty;
-
-                 try
-                 {
-                     serviceUrl = updateUrl.ServiceUrl.ConvertGitHubLinkToRaw();
-                 }
-                 catch (ArgumentException ex)
-                 {
-                     mLogger.LogWarning("Service url for service name {serviceName} in incorrect format. Try convert with default path arguments", serviceName);
-
-                     if (ex.Message == "Invalid GitHubUserContent argument format")
-                         mLogger.LogError("{error}", ex.Message);
-
-                     if (ex.Message == "Invalid GitHub argument format")
-                         serviceUrl = $"{updateUrl.ServiceUrl}/blob/master/service_info.json".ConvertGitHubLinkToRaw();
-
-                     if (string.IsNullOrEmpty(serviceUrl))
-                         mLogger.LogWarning("Convert with default path arguments for service name {serviceName} fails", serviceName);
-                 }
-
-                 if (!string.IsNullOrEmpty(serviceUrl))
-                 {
-                     updateUrls.Add(new ServiceUrlModel 
-                     { 
-                         ServiceName = serviceName,  
-                         ServiceUrl = serviceUrl
-                     });
-
-                     mLogger.LogTrace("Service url for service {name} is {url} added to list", serviceName, serviceUrl);
-                 }
-             }
-
-             return updateUrls;
-         }*/
-
-        /*private static List<ServiceUrlModel> CheckUniquensUrls(List<ServiceUrlModel> urls) 
-        {
-            return urls.GroupBy(model => model.ServiceUrl)
-                       .Select(group => group.First())
-                       .ToList();
-        }*/
 
         #endregion
 

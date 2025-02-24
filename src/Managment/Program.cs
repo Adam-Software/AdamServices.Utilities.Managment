@@ -1,5 +1,4 @@
 ﻿using CommandLine;
-using Managment.Core;
 using Managment.Core.Services;
 using Managment.Interface;
 using Managment.Services.Common;
@@ -46,8 +45,7 @@ namespace Managment
                             loggingBuilder.AddSerilog(logger, dispose: true);
                         });
 
-                        services.AddSingleton<ICheckingUpdateService, CheckingUpdateService>();
-                        services.AddSingleton<IGitService, GitService>();
+                        services.AddSingleton<IUpdateService, UpdateService>();
 
                         services.AddHostedService<ProgramHostedService>();
                     })

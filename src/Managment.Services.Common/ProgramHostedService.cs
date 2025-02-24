@@ -1,11 +1,8 @@
 ﻿using Managment.Interface;
-using Managment.Interface.CheckingUpdateServiceDependency;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,9 +14,8 @@ namespace Managment.Services.Common
 
         private readonly ILogger<ProgramHostedService> mLogger;
         private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
-        private readonly ICheckingUpdateService mCheckingUpdateService;
+        private readonly IUpdateService mCheckingUpdateService;
         private readonly IAppArguments mAppArguments;
-        private readonly IGitService mGitService;
 
         #endregion
 
@@ -34,10 +30,10 @@ namespace Managment.Services.Common
         public ProgramHostedService(IServiceProvider serviceProvider)
         {
             mLogger = serviceProvider.GetRequiredService<ILogger<ProgramHostedService>>();
+
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
-            mCheckingUpdateService = serviceProvider.GetRequiredService<ICheckingUpdateService>();
+            mCheckingUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
             mAppArguments = serviceProvider.GetRequiredService<IAppArguments>();
-            mGitService = serviceProvider.GetRequiredService<IGitService>();
 
             var appLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
 
@@ -54,31 +50,15 @@ namespace Managment.Services.Common
 
         private void Subscribe()
         {
-            mCheckingUpdateService.RaiseUpdateUrlsListEvent += RaiseUpdateUrlsListEvent;
         }
 
         private void Unsubscribe()
-        {
-            mCheckingUpdateService.RaiseUpdateUrlsListEvent -= RaiseUpdateUrlsListEvent;
+        {   
         }
 
         #endregion
 
         #region Events
-
-        private void RaiseUpdateUrlsListEvent(object sender)
-        {
-            /*List<ServiceUrlModel> tempUrls = mCheckingUpdateService.UpdateUrls;
-
-            mLogger.LogTrace("UpdateUrlsListEvent raised");
-
-            mLogger.LogTrace("Finding urls:");
-
-            foreach (ServiceUrlModel url in tempUrls) 
-            {
-                mLogger.LogTrace("{serviceName}{serviceUrl}", url.ServiceName, url.ServiceUrl);
-            }*/
-        }
 
         #endregion
 
@@ -107,28 +87,28 @@ namespace Managment.Services.Common
         {
             mLogger.LogTrace("4. OnStarted has been called.");
 
-            mLogger.LogInformation("Install: {install}", mAppArguments.Install);
-
-            mLogger.LogInformation("Update: {update}", mAppArguments.Update);
+            if ((mAppArguments.Install & mAppArguments.Update) || (!mAppArguments.Install & !mAppArguments.Update))
+            {
+                mLogger.LogWarning("The arguments are specified incorrectly, or not specified at all. I don't know what to do better");
+                mLogger.LogWarning("I don't know what to do better. You need to specify one thing.");
+                mLogger.LogWarning("Arguments are specified:");
+                mLogger.LogWarning("Install mode: {install}", mAppArguments.Install);
+                mLogger.LogWarning("Update mode: {update}", mAppArguments.Update);
+                return;
+            }
 
             if (mAppArguments.Update)
             {
+                mLogger.LogInformation("The application is running in update mode");
+            }
+
+            if (mAppArguments.Install)
+            {
+                mLogger.LogInformation("The application is running in installation mode");
+
                 await mCheckingUpdateService.DownloadRepositoriesListAsync();
                 await mCheckingUpdateService.CheckRepositoriesListAsync();
                 await mCheckingUpdateService.DownloadRepositoriesInfoAsync();
-
-                //await mCheckingUpdateService.CheckAndSaveUpdateListsAsync();
-                //List<ServiceNameWithUrl> results = await mCheckingUpdateService.ReadServiceNameWithUrlListAsync();
-
-
-                //mGitService.Clone(results.FirstOrDefault().ServiceInfoJsonUrl);
-                /*foreach (var result in results)
-                {
-                    await mGitService.Clone(result.ServiceInfoJsonUrl);
-
-                    mLogger.LogInformation("{name}", result.ServiceInfoServiceName);
-                    mLogger.LogInformation("{version}", result.ServiceInfoJsonUrl);
-                }*/
             }
         }
 

@@ -1,7 +1,4 @@
-﻿using Managment.Interface.Extensions;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
+﻿using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -13,7 +10,7 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         private readonly string mRepositoryPath;
 
-        private readonly JsonSerializerOptions jsonSerializerOptions = new()
+        private readonly JsonSerializerOptions mJsonSerializerOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             ReadCommentHandling = JsonCommentHandling.Skip,
@@ -31,7 +28,9 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
         #endregion
 
-        public async Task SaveJsonFilesAsync(string content, string fileName)
+        #region Public methods
+
+        public async Task SaveRawJsonFilesAsync(string content, string fileName)
         {
             if (!Directory.Exists(mRepositoryPath))
             {
@@ -42,35 +41,7 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
             await File.WriteAllTextAsync(filePath, content);
         }
 
-        public async Task<T> ReadJsonFileAsync<T>(string fileName) where T : class
-        {
-            string filePath = Path.Combine(mRepositoryPath, fileName);
-
-            if (!File.Exists(filePath))
-            {
-                throw new FileNotFoundException($"File not found: {filePath}", filePath);
-            }
-
-            string jsonString = await File.ReadAllTextAsync(filePath);
-            return JsonSerializer.Deserialize<T>(jsonString, jsonSerializerOptions);
-        }
-
-        /*public async Task SaveJsonResponseAsync(string fileName, string url)
-        {
-            if (!Directory.Exists(mRepositoryPath))
-            {
-                Directory.CreateDirectory(mRepositoryPath);
-            }
-
-            using HttpClient client = new();
-
-            string jsonResponseServiceUrls = await client.GetStringAsync(url);
-            string filePath = Path.Combine(mRepositoryPath, fileName);
-
-            File.WriteAllText(filePath, jsonResponseServiceUrls);
-        }
-
-        public void SerializeAndSaveServiceUrls(List<ServiceUrlModel> serviceUrls, string fileName)
+        public async Task SerializeAndSaveJsonFilesAsync<T>(T content, string fileName) where T : class
         {
             if (!Directory.Exists(mRepositoryPath))
             {
@@ -79,21 +50,8 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
 
             string filePath = Path.Combine(mRepositoryPath, fileName);
 
-            string jsonString = JsonSerializer.Serialize(serviceUrls, jsonSerializerOptions);
-            File.WriteAllText(filePath, jsonString);
-        }
-
-        public void SerializeAndSaveServiceNameWithUrls(List<ServiceNameWithUrl> serviceUrls, string fileName)
-        {
-            if (!Directory.Exists(mRepositoryPath))
-            {
-                Directory.CreateDirectory(mRepositoryPath);
-            }
-
-            string filePath = Path.Combine(mRepositoryPath, fileName);
-
-            string jsonString = JsonSerializer.Serialize(serviceUrls, jsonSerializerOptions);
-            File.WriteAllText(filePath, jsonString);
+            string jsonString = JsonSerializer.Serialize<T>(content, mJsonSerializerOptions);
+            await File.WriteAllTextAsync(filePath, jsonString);
         }
 
         public async Task<T> ReadJsonFileAsync<T>(string fileName) where T : class
@@ -106,8 +64,8 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
             }
 
             string jsonString = await File.ReadAllTextAsync(filePath);
-            return JsonSerializer.Deserialize<T>(jsonString, jsonSerializerOptions);
-        }*/
+            return JsonSerializer.Deserialize<T>(jsonString, mJsonSerializerOptions);
+        }
 
         public void CreateOrClearRepositoryDirectory()
         {
@@ -123,5 +81,7 @@ namespace Managment.Interface.CheckingUpdateServiceDependency
                 File.Delete(file);
             }
         }
+
+        #endregion
     }
 }

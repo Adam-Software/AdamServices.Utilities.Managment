@@ -3,7 +3,7 @@
 namespace Managment.Interface
 {
     public delegate void UpdateUrlsListEventHandler(object sender);
-    public interface ICheckingUpdateService
+    public interface IUpdateService
     {
         #region Events
 

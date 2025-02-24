@@ -4,5 +4,12 @@
 		"repositoriesOwner": "vertigra",
 		/* repositories names */
 		"repositoriesName": "Services.FindRobot"
+	},
+	{
+		/* user or organization */
+		"repositoriesOwner": "vertigra",
+		/* repositories names */
+		"repositoriesName": "Services.Managment"
 	}
+
 ]
