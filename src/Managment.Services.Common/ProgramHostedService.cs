@@ -16,6 +16,7 @@ namespace Managment.Services.Common
         private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
         private readonly IUpdateService mCheckingUpdateService;
         private readonly IAppArguments mAppArguments;
+        private readonly IDownloadService mDownloadService;
 
         #endregion
 
@@ -34,6 +35,7 @@ namespace Managment.Services.Common
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
             mCheckingUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
             mAppArguments = serviceProvider.GetRequiredService<IAppArguments>();
+            mDownloadService = serviceProvider.GetRequiredService<IDownloadService>();
 
             var appLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
 
@@ -121,6 +123,7 @@ namespace Managment.Services.Common
                 mLogger.LogInformation("The application is running in installation mode");
 
                 await mCheckingUpdateService.DownloadAndCheckUpdateInfoFiles();
+                await mDownloadService.ReadServiceRepository();
             }
         }
 
