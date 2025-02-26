@@ -45,6 +45,7 @@ namespace Managment
                             loggingBuilder.AddSerilog(logger, dispose: true);
                         });
 
+                        services.AddSingleton<IJsonRepositoryService, JsonRepositoryService>();
                         services.AddSingleton<IGitHubCilentService, GitHubCilentService>();
                         services.AddSingleton<IUpdateService, UpdateService>();
                         services.AddSingleton<IDownloadService, DownloadService>();

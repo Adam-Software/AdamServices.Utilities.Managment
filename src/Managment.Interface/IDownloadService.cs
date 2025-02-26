@@ -4,6 +4,6 @@ namespace Managment.Interface
 {
     public interface IDownloadService
     {
-        public Task ReadServiceRepository();
+        public Task ReadServiceRepositoryFile();
     }
 }

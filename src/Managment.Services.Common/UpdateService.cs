@@ -1,13 +1,12 @@
 ﻿using Managment.Interface;
-using Managment.Interface.AppSettingsOptionsServiceDependency;
-using Managment.Interface.CheckingUpdateServiceDependency;
+using Managment.Interface.Common;
+using Managment.Interface.Common.JsonModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Threading.Tasks;
 
 
@@ -18,17 +17,19 @@ namespace Managment.Services.Common
         #region Services
 
         private readonly ILogger<UpdateService> mLogger;
+        private readonly IJsonRepositoryService mJsonRepositoryService;
 
         #endregion
 
         #region Var
 
         private readonly GitHubClient mGitHubClient;
-        private readonly JsonRepository mJsonRepository;
+        
         private readonly List<ServiceRepositoryModel> mSettingsServiceRepositories;
         private readonly List<ServiceRepositoryModel> mServiceRepositories;
         private readonly string mDownloadInfoFilesNamePath;
-        private readonly string mDownloadRepositoriesFilesNamePath; 
+        private readonly string mDownloadRepositoriesFilesNamePath;
+        private readonly string mDownloadPath;
 
         #endregion
 
@@ -44,16 +45,17 @@ namespace Managment.Services.Common
         public UpdateService(IServiceProvider serviceProvider) 
         {
             mLogger = serviceProvider.GetRequiredService<ILogger<UpdateService>>();
+            mJsonRepositoryService = serviceProvider.GetRequiredService<IJsonRepositoryService>();
             IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
+
 
             IGitHubCilentService gitHubClientService = serviceProvider.GetRequiredService<IGitHubCilentService>();
             mGitHubClient = gitHubClientService.GitHubClient;
 
-            string servicesRepositoriesInfoDownloadPath = appSettingsOptionsService.UpdateServiceSettings.ServicesRepositoriesInfoDownloadPath;
-            mJsonRepository = new(servicesRepositoriesInfoDownloadPath);
-            
             mSettingsServiceRepositories = new List<ServiceRepositoryModel>(appSettingsOptionsService.UpdateServiceSettings.ServicesRepositories);
             mServiceRepositories = [];
+
+            mDownloadPath = mJsonRepositoryService.DownloadPath;
 
             mDownloadInfoFilesNamePath = appSettingsOptionsService.UpdateServiceSettings.DownloadInfoFilesNamePath;
             mDownloadRepositoriesFilesNamePath = appSettingsOptionsService.UpdateServiceSettings.DownloadRepositoriesFilesNamePath;
@@ -69,12 +71,11 @@ namespace Managment.Services.Common
         {
             OnRaiseDownloadAndCheckUpdateStartedEvent();
 
-            mJsonRepository.CreateOrClearRepositoryDirectory();
+            DirectoryUtilites.CreateOrClearRepositoryDirectory(mDownloadPath);
 
             await DownloadRepositoriesListAsync();
             await CheckAndSaveRepositoriesListAsync();
             await DownloadRepositoriesInfoAsync();
-            //await DownloadFromSourceAsync();
 
             OnRaiseDownloadAndCheckUpdateFinishedEvent();
         }
@@ -101,7 +102,7 @@ namespace Managment.Services.Common
                 {
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
                     string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);    
-                    await mJsonRepository.SaveRawJsonFilesAsync(serviceRepositoriesList, fileName);
+                    await mJsonRepositoryService.SaveRawJsonFilesAsync(serviceRepositoriesList, fileName);
                 }
                 catch (NotFoundException) 
                 {
@@ -121,7 +122,7 @@ namespace Managment.Services.Common
                 finally
                 {
                     if (!savedWithException)
-                        mLogger.LogInformation("{counter}. {filePath} saved!", i, $"{mJsonRepository.InfoDownloadPath}{Path.DirectorySeparatorChar}{fileName}");
+                        mLogger.LogInformation("{counter}. {filePath} saved!", i, $"{mJsonRepositoryService.DownloadPath}{Path.DirectorySeparatorChar}{fileName}");
                 }   
             }
 
@@ -143,7 +144,7 @@ namespace Managment.Services.Common
 
                 try
                 {
-                    repositories = await mJsonRepository.ReadJsonFileAsync<List<ServiceRepositoryModel>>(fileName);
+                    repositories = await mJsonRepositoryService.ReadJsonFileAsync<List<ServiceRepositoryModel>>(fileName);
                 }
                 catch (FileNotFoundException)
                 {
@@ -159,7 +160,7 @@ namespace Managment.Services.Common
                 {
                     if (!readWithException)
                     {
-                        foreach (var repository in repositories)
+                        foreach (ServiceRepositoryModel repository in repositories)
                         {
                             mLogger.LogInformation("RepositoriesName: {RepositoriesName} RepositoriesOwner: {RepositoriesOwner} read and added to download list", repository.RepositoriesName, repository.RepositoriesOwner);
                             mServiceRepositories.Add(repository);    
@@ -172,10 +173,9 @@ namespace Managment.Services.Common
 
             if (repositoryInfoFilesName.Count > 0) 
             {
-                await mJsonRepository.SerializeAndSaveJsonFilesAsync(repositoryInfoFilesName, mDownloadRepositoriesFilesNamePath);
+                await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(repositoryInfoFilesName, mDownloadRepositoriesFilesNamePath);
                 mLogger.LogInformation("Create repeository file name {FilesNamePath}", mDownloadRepositoriesFilesNamePath);
             }
-
 
             mLogger.LogInformation("=== Step 2. Check Repositories Info Files Finished ===");
         }
@@ -204,7 +204,7 @@ namespace Managment.Services.Common
                 {
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, filePath);
                     string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
-                    await mJsonRepository.SaveRawJsonFilesAsync(serviceRepositoriesList, fileName);
+                    await mJsonRepositoryService.SaveRawJsonFilesAsync(serviceRepositoriesList, fileName);
                 }
                 catch (Exception ex) 
                 {
@@ -223,65 +223,9 @@ namespace Managment.Services.Common
 
             if (serviceInfoFilesName.Count > 0)
             {
-                await mJsonRepository.SerializeAndSaveJsonFilesAsync(serviceInfoFilesName, mDownloadInfoFilesNamePath);
+                await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(serviceInfoFilesName, mDownloadInfoFilesNamePath);
                 mLogger.LogInformation("Create service info file name {FilesNamePath}", mDownloadInfoFilesNamePath);
             }
-
-            mLogger.LogInformation("=== Step 3. Download Service Info Files Finished ===");
-        }
-
-        public async Task DownloadFromSourceAsync()
-        {
-            mLogger.LogInformation("=== Step 4. Download From Source ===");
-
-            //List<string> serviceInfoFilesName = [];
-            int i = 0;
-
-            foreach (ServiceRepositoryModel serviceRepository in mServiceRepositories)
-            {
-                i++;
-
-                bool savedWithException = false;
-                //string filePath = "service_info.json";
-
-                //if (!string.IsNullOrEmpty(serviceRepository.ServicesListFilePath))
-                //    filePath = serviceRepository.ServicesListFilePath;
-
-                //mLogger.LogInformation("{counter}. Start download service info file from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, filePath);
-                //string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.info.json";
-
-                try
-                {
-                    byte[] archiveBytes = await mGitHubClient.Repository.Content.GetArchive(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, ArchiveFormat.Zipball);
-                    mLogger.LogInformation("{counter}{repositoriesName} downloading", i, serviceRepository.RepositoriesName);
-                    await File.WriteAllBytesAsync($"{serviceRepository.RepositoriesName}.zip", archiveBytes);
-                    mLogger.LogInformation("{counter}{repositoriesName} saved", i, serviceRepository.RepositoriesName);
-                    ZipFile.ExtractToDirectory($"{serviceRepository.RepositoriesName}.zip", $"{serviceRepository.RepositoriesName}");
-                    mLogger.LogInformation("{counter}{repositoriesName} extracted", i, serviceRepository.RepositoriesName);
-
-                    //string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
-                    //await mJsonRepository.SaveRawJsonFilesAsync(serviceRepositoriesList, fileName);
-                }
-                catch (Exception ex)
-                {
-                    savedWithException = true;
-                    mLogger.LogError("{exception}", ex);
-                }
-                finally
-                {
-                    if (!savedWithException)
-                    {
-                        //mLogger.LogInformation("{сounter}. Download service info file and save as {filename} ", i, fileName);
-                        //serviceInfoFilesName.Add(fileName);
-                    }
-                }
-            }
-
-            /*if (serviceInfoFilesName.Count > 0)
-            {
-                await mJsonRepository.SerializeAndSaveJsonFilesAsync(serviceInfoFilesName, mDownloadInfoFilesNamePath);
-                mLogger.LogInformation("Create service info file name {FilesNamePath}", mDownloadInfoFilesNamePath);
-            }*/
 
             mLogger.LogInformation("=== Step 3. Download Service Info Files Finished ===");
         }
@@ -289,7 +233,7 @@ namespace Managment.Services.Common
         public void Dispose()
         {
             mLogger.LogInformation("=== UpdateService. Dispose ===");
-            mJsonRepository.CreateOrClearRepositoryDirectory();
+            DirectoryUtilites.CreateOrClearRepositoryDirectory(mDownloadPath);
             mServiceRepositories.Clear();
             mSettingsServiceRepositories.Clear();
         }

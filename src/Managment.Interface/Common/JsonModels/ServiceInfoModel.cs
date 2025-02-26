@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Managment.Interface.CheckingUpdateServiceDependency
+namespace Managment.Interface.Common.JsonModels
 {
     public class ServiceInfoModel
     {

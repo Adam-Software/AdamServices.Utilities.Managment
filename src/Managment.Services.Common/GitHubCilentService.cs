@@ -21,7 +21,7 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<UpdateService>>();
             IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
 
-            string gitHubUserAgentHeader = appSettingsOptionsService.UpdateServiceSettings.GitHubUserAgentHeader;
+            string gitHubUserAgentHeader = appSettingsOptionsService.GitHubClientServiceSettings.GitHubUserAgentHeader;
             mGitHubClient = new(new ProductHeaderValue(gitHubUserAgentHeader));
 
             mLogger.LogInformation("=== GitHubCilentService. Start ===");

@@ -1,4 +1,4 @@
-﻿namespace Managment.Interface.AppSettingsOptionsServiceDependency
+﻿namespace Managment.Interface.Common.JsonModels
 {
     public class ServiceRepositoryModel
     {
