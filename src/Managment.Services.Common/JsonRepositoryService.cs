@@ -91,6 +91,19 @@ namespace Managment.Services.Common
             return JsonSerializer.Deserialize<T>(jsonString, mJsonSerializerOptions);
         }
 
+        public async Task<T> ReadJsonFileAsync<T>(string path, string fileName) where T : class
+        {
+            string filePath = Path.Combine(path, fileName);
+
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException($"File not found: {filePath}", filePath);
+            }
+
+            string jsonString = await File.ReadAllTextAsync(filePath);
+            return JsonSerializer.Deserialize<T>(jsonString, mJsonSerializerOptions);
+        }
+
         #endregion
     }
 }

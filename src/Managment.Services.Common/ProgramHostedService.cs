@@ -123,7 +123,7 @@ namespace Managment.Services.Common
                 mLogger.LogInformation("The application is running in installation mode");
 
                 await mCheckingUpdateService.DownloadAndCheckUpdateInfoFiles();
-                await mDownloadService.ReadServiceRepositoryFile();
+                await mDownloadService.DownloadSourceToBuildFolders();
             }
         }
 
