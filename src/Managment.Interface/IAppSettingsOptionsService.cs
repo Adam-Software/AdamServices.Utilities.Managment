@@ -6,5 +6,6 @@ namespace Managment.Interface
     {
         public UpdateServiceSettings UpdateServiceSettings { get; set; }
         public GitHubClientServiceSettings GitHubClientServiceSettings { get; set; }
+        public DownloadServiceSettings DownloadServiceSettings { set; get; }
     }
 }

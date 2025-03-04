@@ -4,7 +4,7 @@ namespace Managment.Interface.Common
 {
     public static class DirectoryUtilites
     {
-        public static void CreateOrClearRepositoryDirectory(string path)
+        public static void CreateOrClearDirectory(string path)
         {
             if (!Directory.Exists(path))
             {
@@ -12,8 +12,13 @@ namespace Managment.Interface.Common
                 return;
             }
 
-            string[] files = Directory.GetFiles(path);
+            string[] directories = Directory.GetDirectories(path);
+            foreach (string directory in directories)
+            {
+                Directory.Delete(directory, true);
+            }
 
+            string[] files = Directory.GetFiles(path);
             foreach (string file in files)
             {
                 File.Delete(file);
@@ -28,7 +33,6 @@ namespace Managment.Interface.Common
                 throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
 
             DirectoryInfo[] dirs = dir.GetDirectories();
-
 
             Directory.CreateDirectory(destinationDir);
 

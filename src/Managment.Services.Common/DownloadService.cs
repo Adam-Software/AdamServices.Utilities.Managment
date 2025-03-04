@@ -1,5 +1,4 @@
 ﻿using Managment.Interface;
-using Managment.Interface.AppSettingsOptionsServiceDependency;
 using Managment.Interface.Common;
 using Managment.Interface.Common.JsonModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +10,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using File = System.IO.File;
 
 namespace Managment.Services.Common
 {
@@ -29,11 +29,17 @@ namespace Managment.Services.Common
 
         private readonly GitHubClient mGitHubClient;
         private readonly List<ServiceRepositoryModel> mServiceRepositories;
+        private readonly string mDownloadFolderPath = "download";
+        private readonly string mBuildFolderPath = "build";
 
         #endregion
 
-        private const string cDownloadFolderPath = "download";
-        private const string cBuildFolderPath = "build";
+        #region Const
+
+        private const string cDownloadZipFilesListName = "download-zip-files-list.json";
+        private const string cExtractZipFilesFoldersFileName = "extract-zip-files-folders.json";
+
+        #endregion
 
         #region ~
 
@@ -46,6 +52,9 @@ namespace Managment.Services.Common
 
             IGitHubCilentService gitHubClientService = serviceProvider.GetRequiredService<IGitHubCilentService>();
             mGitHubClient = gitHubClientService.GitHubClient;
+
+            mDownloadFolderPath = mAppSettingsOptionsService.DownloadServiceSettings.DownloadPath;
+            mBuildFolderPath = mAppSettingsOptionsService.DownloadServiceSettings.BuildPath;
 
             mServiceRepositories = [];
             mLogger.LogInformation("=== DownloadService. Start ===");
@@ -71,16 +80,31 @@ namespace Managment.Services.Common
         {
             mLogger.LogInformation("=== Step 1. Read Service Repository Start ===");
 
-            List<string> repositories = await mJsonRepositoryService.ReadJsonFileAsync<List<string>>(mAppSettingsOptionsService.UpdateServiceSettings.DownloadRepositoriesFilesNamePath);
+            int i = 0;
 
-            foreach (string repository in repositories)
+            try
             {
-                List<ServiceRepositoryModel> serviceRepository = await mJsonRepositoryService.ReadJsonFileAsync<List<ServiceRepositoryModel>>(repository);
-
-                foreach (var repo in serviceRepository)
+                List<string> repositories = await mJsonRepositoryService.ReadJsonFileAsync<List<string>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, mAppSettingsOptionsService.UpdateServiceSettings.DownloadRepositoriesFilesNamePath);
+                
+                foreach (string repository in repositories)
                 {
-                    mServiceRepositories.Add(repo);
+                    List<ServiceRepositoryModel> serviceRepositories = await mJsonRepositoryService.ReadJsonFileAsync<List<ServiceRepositoryModel>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, repository);
+
+                    foreach (var serviceRepository in serviceRepositories)
+                    {
+                        i++;
+                        mServiceRepositories.Add(serviceRepository);
+                        mLogger.LogInformation("{cointer}. {RepositoriesName} added to the list of repositories for download", i, serviceRepository.RepositoriesName);
+                    }
                 }
+            }
+            catch(Exception ex) 
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+            finally
+            {
+                i = 0;
             }
 
             mLogger.LogInformation("=== Step 1. Read Service Repository Finish ===");
@@ -91,37 +115,39 @@ namespace Managment.Services.Common
         {
             mLogger.LogInformation("=== Step 2. Download Zip From Repository Start ===");
 
-            DirectoryUtilites.CreateOrClearRepositoryDirectory(cDownloadFolderPath);
-            
             List<string> downloadArchiveFilesName = [];
             int i = 0;
 
-            foreach (ServiceRepositoryModel serviceRepository in mServiceRepositories)
+            try
             {
-                i++;
+                DirectoryUtilites.CreateOrClearDirectory(mDownloadFolderPath);
 
-                try
+                foreach (ServiceRepositoryModel serviceRepository in mServiceRepositories)
                 {
+                    i++;
+
                     byte[] archiveBytes = await mGitHubClient.Repository.Content.GetArchive(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, ArchiveFormat.Zipball);
-                    mLogger.LogInformation("{counter}{repositoriesName} downloading", i, serviceRepository.RepositoriesName);
-                    
-                    
+                    mLogger.LogInformation("{counter}. {repositoriesName} downloading", i, serviceRepository.RepositoriesName);
+
                     string filename = $"{serviceRepository.RepositoriesName}.zip";
-                    string downloadPath = Path.Combine(cDownloadFolderPath, filename);
+                    string downloadPath = Path.Combine(mDownloadFolderPath, filename);
 
                     await File.WriteAllBytesAsync(downloadPath, archiveBytes);
 
-                    mLogger.LogInformation("{counter}. {repositoriesName} saved as {downloadPath}.zip", i, serviceRepository.RepositoriesName, downloadPath);
+                    mLogger.LogInformation("{counter}. {repositoriesName} saved as {downloadPath}", i, serviceRepository.RepositoriesName, downloadPath);
                     downloadArchiveFilesName.Add(downloadPath);
                 }
-                catch (Exception ex)
-                {
-                    mLogger.LogError("{exception}", ex);
-                }
-                
-            }
 
-            await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(downloadArchiveFilesName, cDownloadFolderPath, "download-zip-files-list.json");
+                await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(downloadArchiveFilesName, mDownloadFolderPath, cDownloadZipFilesListName);
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+            finally
+            {
+                i = 0;
+            }
 
             mLogger.LogInformation("=== Step 2. Download Zip From Repository Finished ===");
         }
@@ -129,21 +155,37 @@ namespace Managment.Services.Common
         private async Task ExtractSourceFiles()
         {
             mLogger.LogInformation("=== Step 3. Extract Source Files Started ===");
-            
-            var zipArchiveFilePaths = await mJsonRepositoryService.ReadJsonFileAsync<List<string>>($"{cDownloadFolderPath}", "download-zip-files-list.json");
-            List<string> extractArchiveFolders = [];
+            int i = 0;
 
-            foreach (var zipArchiveFilePath in zipArchiveFilePaths)
+            try
             {
-                var extractDirectoryName = Path.GetFileNameWithoutExtension(zipArchiveFilePath);
-                var extractPath = Path.Combine (cDownloadFolderPath, extractDirectoryName);
+                List<string> zipArchiveFilePaths = await mJsonRepositoryService.ReadJsonFileAsync<List<string>>(mDownloadFolderPath, cDownloadZipFilesListName);
+                List<string> extractArchiveFolders = [];
+                
+                foreach (string zipArchiveFilePath in zipArchiveFilePaths)
+                {
+                    i++;
 
-                ZipArchive zipArchive = ZipFile.OpenRead(zipArchiveFilePath);
-                zipArchive.ExtractToDirectory(extractPath, true);
-                extractArchiveFolders.Add(extractPath);
+                    var extractDirectoryName = Path.GetFileNameWithoutExtension(zipArchiveFilePath);
+                    var extractPath = Path.Combine(mDownloadFolderPath, extractDirectoryName);
+
+                    ZipArchive zipArchive = ZipFile.OpenRead(zipArchiveFilePath);
+                    zipArchive.ExtractToDirectory(extractPath, true);
+
+                    extractArchiveFolders.Add(extractPath);
+                    mLogger.LogInformation("{counter}. {zipArchiveFilePath} extracted to dirrectory {extractPath}", i, zipArchiveFilePath, extractPath);
+                }
+
+                await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(extractArchiveFolders, mDownloadFolderPath, cExtractZipFilesFoldersFileName);
             }
-
-            await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(extractArchiveFolders, cDownloadFolderPath, "extract-zip-files-folders.json");
+            catch(Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+            finally
+            {
+                i = 0;
+            }
 
             mLogger.LogInformation("=== Step 3. Extract Source Files Finihed ===");
         }
@@ -151,23 +193,31 @@ namespace Managment.Services.Common
         private async Task MoveSourceFilesToBuildFolder()
         {
             mLogger.LogInformation("=== Step 4. Move Source Files To Build Folder Started ===");
+            int i = 0;
 
-            
-            var sourceFolderPaths = await mJsonRepositoryService.ReadJsonFileAsync<List<string>>(cDownloadFolderPath, "extract-zip-files-folders.json");
-
-            foreach (var sourceFolderPath in sourceFolderPaths) 
+            try
             {
-                var source = new DirectoryInfo(sourceFolderPath).GetDirectories().FirstOrDefault();   
-                var destonation = Path.Combine(cBuildFolderPath, Path.GetFileName(sourceFolderPath));
+                var sourceFolderPaths = await mJsonRepositoryService.ReadJsonFileAsync<List<string>>(mDownloadFolderPath, cExtractZipFilesFoldersFileName);
+                DirectoryUtilites.CreateOrClearDirectory(mBuildFolderPath);
 
-                try
+                foreach (var sourceFolderPath in sourceFolderPaths)
                 {
-                    DirectoryUtilites.CopyDirectory(source.FullName, destonation, true);
+                    i++;
+
+                    string source = new DirectoryInfo(sourceFolderPath).GetDirectories().FirstOrDefault().FullName;
+                    string destonation = Path.Combine(mBuildFolderPath, Path.GetFileName(sourceFolderPath));
+
+                    DirectoryUtilites.CopyDirectory(source, destonation, true);
+                    mLogger.LogInformation("{counter}. Copy {source} to {destonation}", i, source, destonation);
                 }
-                catch(Exception ex) 
-                {
-                    mLogger.LogError(ex.Message);
-                }
+            }
+            catch(Exception ex) 
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+            finally
+            {
+                i = 0;
             }
 
             mLogger.LogInformation("=== Step 4. Move Source Files To Build Folder Finish ===");
