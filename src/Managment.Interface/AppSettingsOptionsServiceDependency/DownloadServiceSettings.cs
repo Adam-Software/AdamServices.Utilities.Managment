@@ -2,7 +2,7 @@
 {
     public class DownloadServiceSettings
     {
-        public string DownloadPath { get; set; } = "download";
-        public string BuildPath { get; set; } = "build";
+        public string SourceDownloadPath { get; set; } = "download";
+        public string SourceBuildPath { get; set; } = "build";
     }
 }

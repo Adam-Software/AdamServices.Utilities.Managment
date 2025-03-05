@@ -53,8 +53,8 @@ namespace Managment.Services.Common
             IGitHubCilentService gitHubClientService = serviceProvider.GetRequiredService<IGitHubCilentService>();
             mGitHubClient = gitHubClientService.GitHubClient;
 
-            mDownloadFolderPath = mAppSettingsOptionsService.DownloadServiceSettings.DownloadPath;
-            mBuildFolderPath = mAppSettingsOptionsService.DownloadServiceSettings.BuildPath;
+            mDownloadFolderPath = mAppSettingsOptionsService.DownloadServiceSettings.SourceDownloadPath;
+            mBuildFolderPath = mAppSettingsOptionsService.DownloadServiceSettings.SourceBuildPath;
 
             mServiceRepositories = [];
             mLogger.LogInformation("=== DownloadService. Start ===");
