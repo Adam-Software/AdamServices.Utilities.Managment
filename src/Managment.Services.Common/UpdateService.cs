@@ -17,7 +17,6 @@ namespace Managment.Services.Common
         #region Services
 
         private readonly ILogger<UpdateService> mLogger;
-        private readonly IJsonRepositoryService mJsonRepositoryService;
 
         #endregion
 
@@ -35,8 +34,8 @@ namespace Managment.Services.Common
 
         #region Events
 
-        public event DownloadAndCheckUpdateStartedEventHandler RaiseDownloadAndCheckUpdateStartedEvent;
-        public event DownloadAndCheckUpdateFinishedEventHandler RaiseDownloadAndCheckUpdateFinishedEvent;
+        public event CheckUpdateStartedEventHandler RaiseCheckUpdateStartedEvent;
+        public event CheckUpdateFinishedEventHandler RaiseCheckUpdateFinishedEvent;
 
         #endregion
 
@@ -45,11 +44,10 @@ namespace Managment.Services.Common
         public UpdateService(IServiceProvider serviceProvider) 
         {
             mLogger = serviceProvider.GetRequiredService<ILogger<UpdateService>>();
-            mJsonRepositoryService = serviceProvider.GetRequiredService<IJsonRepositoryService>();
+
             IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
-
-
             IGitHubCilentService gitHubClientService = serviceProvider.GetRequiredService<IGitHubCilentService>();
+
             mGitHubClient = gitHubClientService.GitHubClient;
 
             mSettingsServiceRepositories = new List<ServiceRepositoryModel>(appSettingsOptionsService.UpdateServiceSettings.ServicesRepositories);
@@ -66,9 +64,9 @@ namespace Managment.Services.Common
 
         #region Public methods
 
-        public async Task DownloadAndCheckUpdateInfoFiles()
+        public async Task CheckUpdates()
         {
-            OnRaiseDownloadAndCheckUpdateStartedEvent();
+            OnRaiseCheckUpdateStartedEvent();
 
             DirectoryUtilites.CreateOrClearDirectory(mDownloadPath);
 
@@ -76,7 +74,7 @@ namespace Managment.Services.Common
             await CheckAndSaveRepositoriesListAsync();
             await DownloadRepositoriesInfoAsync();
 
-            OnRaiseDownloadAndCheckUpdateFinishedEvent();
+            OnRaiseCheckUpdateFinishedEvent();
         }
 
         #endregion
@@ -101,7 +99,7 @@ namespace Managment.Services.Common
                 {
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
                     string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);    
-                    await mJsonRepositoryService.SaveRawJsonFilesAsync(serviceRepositoriesList, mDownloadPath, fileName);
+                    await JsonUtilites.SaveRawJsonFilesAsync(serviceRepositoriesList, mDownloadPath, fileName);
                 }
                 catch (NotFoundException) 
                 {
@@ -143,7 +141,7 @@ namespace Managment.Services.Common
 
                 try
                 {
-                    repositories = await mJsonRepositoryService.ReadJsonFileAsync<List<ServiceRepositoryModel>>(mDownloadPath, fileName);
+                    repositories = await JsonUtilites.ReadJsonFileAsync<List<ServiceRepositoryModel>>(mDownloadPath, fileName);
                 }
                 catch (FileNotFoundException)
                 {
@@ -172,7 +170,7 @@ namespace Managment.Services.Common
 
             if (repositoryInfoFilesName.Count > 0) 
             {
-                await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(repositoryInfoFilesName, mDownloadPath, mDownloadRepositoriesFilesNamePath);
+                await JsonUtilites.SerializeAndSaveJsonFilesAsync(repositoryInfoFilesName, mDownloadPath, mDownloadRepositoriesFilesNamePath);
                 mLogger.LogInformation("Create repeository file name {FilesNamePath}", mDownloadRepositoriesFilesNamePath);
             }
 
@@ -203,7 +201,7 @@ namespace Managment.Services.Common
                 {
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, filePath);
                     string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
-                    await mJsonRepositoryService.SaveRawJsonFilesAsync(serviceRepositoriesList, mDownloadPath, fileName);
+                    await JsonUtilites.SaveRawJsonFilesAsync(serviceRepositoriesList, mDownloadPath, fileName);
                 }
                 catch (Exception ex) 
                 {
@@ -222,7 +220,7 @@ namespace Managment.Services.Common
 
             if (serviceInfoFilesName.Count > 0)
             {
-                await mJsonRepositoryService.SerializeAndSaveJsonFilesAsync(serviceInfoFilesName, mDownloadPath, mDownloadInfoFilesNamePath);
+                await JsonUtilites.SerializeAndSaveJsonFilesAsync(serviceInfoFilesName, mDownloadPath, mDownloadInfoFilesNamePath);
                 mLogger.LogInformation("Create service info file name {FilesNamePath}", mDownloadInfoFilesNamePath);
             }
 
@@ -241,15 +239,15 @@ namespace Managment.Services.Common
 
         #region OnRaise events
 
-        protected virtual  void OnRaiseDownloadAndCheckUpdateStartedEvent()
+        protected virtual  void OnRaiseCheckUpdateStartedEvent()
         {
-            DownloadAndCheckUpdateStartedEventHandler raiseEvents = RaiseDownloadAndCheckUpdateStartedEvent;
+            CheckUpdateStartedEventHandler raiseEvents = RaiseCheckUpdateStartedEvent;
             raiseEvents?.Invoke(this);
         }
 
-        protected virtual void OnRaiseDownloadAndCheckUpdateFinishedEvent()
+        protected virtual void OnRaiseCheckUpdateFinishedEvent()
         {
-            DownloadAndCheckUpdateFinishedEventHandler raiseEvents = RaiseDownloadAndCheckUpdateFinishedEvent;
+            CheckUpdateFinishedEventHandler raiseEvents = RaiseCheckUpdateFinishedEvent;
             raiseEvents?.Invoke(this);
         }
 

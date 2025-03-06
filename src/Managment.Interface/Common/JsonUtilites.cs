@@ -1,17 +1,15 @@
-﻿using Managment.Interface;
-using System;
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Managment.Services.Common
+namespace Managment.Interface.Common
 {
-    public class JsonRepositoryService : IJsonRepositoryService
+    public class JsonUtilites 
     {
         
         #region Var
 
-        private readonly JsonSerializerOptions mJsonSerializerOptions = new()
+        private static readonly JsonSerializerOptions mJsonSerializerOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             ReadCommentHandling = JsonCommentHandling.Skip,
@@ -22,13 +20,11 @@ namespace Managment.Services.Common
 
         #region ~
 
-        public JsonRepositoryService(IServiceProvider serviceProvider) {}
-
         #endregion
 
         #region Public methods
 
-        public async Task SaveRawJsonFilesAsync(string content, string path, string fileName)
+        public static async Task SaveRawJsonFilesAsync(string content, string path, string fileName)
         {
             if (!Directory.Exists(path))
             {
@@ -39,7 +35,7 @@ namespace Managment.Services.Common
             await File.WriteAllTextAsync(filePath, content);
         }
 
-        public async Task SerializeAndSaveJsonFilesAsync<T>(T content, string path, string fileName) where T : class
+        public static async Task SerializeAndSaveJsonFilesAsync<T>(T content, string path, string fileName) where T : class
         {
             if (!Directory.Exists(path))
             {
@@ -52,7 +48,7 @@ namespace Managment.Services.Common
             await File.WriteAllTextAsync(filePath, jsonString);
         }
 
-        public async Task<T> ReadJsonFileAsync<T>(string path, string fileName) where T : class
+        public static async Task<T> ReadJsonFileAsync<T>(string path, string fileName) where T : class
         {
             string filePath = Path.Combine(path, fileName);
 

@@ -14,7 +14,7 @@ namespace Managment.Services.Common
 
         private readonly ILogger<ProgramHostedService> mLogger;
         private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
-        private readonly IUpdateService mCheckingUpdateService;
+        private readonly IUpdateService mUpdateService;
         private readonly IAppArguments mAppArguments;
         private readonly IDownloadService mDownloadService;
 
@@ -33,7 +33,7 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<ProgramHostedService>>();
 
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
-            mCheckingUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
+            mUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
             mAppArguments = serviceProvider.GetRequiredService<IAppArguments>();
             mDownloadService = serviceProvider.GetRequiredService<IDownloadService>();
 
@@ -52,26 +52,26 @@ namespace Managment.Services.Common
 
         private void Subscribe()
         {
-            mCheckingUpdateService.RaiseDownloadAndCheckUpdateStartedEvent += RaiseDownloadAndCheckUpdateStartedEvent;
-            mCheckingUpdateService.RaiseDownloadAndCheckUpdateFinishedEvent += RaiseDownloadAndCheckUpdateFinishedEvent;
+            mUpdateService.RaiseCheckUpdateStartedEvent += RaiseCheckUpdateStartedEvent;
+            mUpdateService.RaiseCheckUpdateFinishedEvent += RaiseCheckUpdateFinishedEvent;
         }
 
         private void Unsubscribe()
         {
-            mCheckingUpdateService.RaiseDownloadAndCheckUpdateStartedEvent -= RaiseDownloadAndCheckUpdateStartedEvent;
-            mCheckingUpdateService.RaiseDownloadAndCheckUpdateFinishedEvent -= RaiseDownloadAndCheckUpdateFinishedEvent;
+            mUpdateService.RaiseCheckUpdateStartedEvent -= RaiseCheckUpdateStartedEvent;
+            mUpdateService.RaiseCheckUpdateFinishedEvent -= RaiseCheckUpdateFinishedEvent;
         }
 
         #endregion
 
         #region Events
 
-        private void RaiseDownloadAndCheckUpdateStartedEvent(object sender)
+        private void RaiseCheckUpdateStartedEvent(object sender)
         {
             mLogger.LogTrace("=== Raise DownloadAndCheckUpdateStarted Event ===");
         }
 
-        private void RaiseDownloadAndCheckUpdateFinishedEvent(object sender)
+        private void RaiseCheckUpdateFinishedEvent(object sender)
         {
             mLogger.LogTrace("=== Raise DownloadAndCheckUpdateStarted Event ===");
         }
@@ -122,7 +122,7 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in installation mode");
 
-                await mCheckingUpdateService.DownloadAndCheckUpdateInfoFiles();
+                await mUpdateService.CheckUpdates();
                 await mDownloadService.DownloadSourceToBuildFolders();
             }
         }
@@ -130,7 +130,8 @@ namespace Managment.Services.Common
         private void OnStopping()
         {
             Unsubscribe();
-            mCheckingUpdateService.Dispose();
+            mUpdateService.Dispose();
+            mDownloadService.Dispose();
 
             mLogger.LogTrace("5. OnStopping has been called.");
         }
