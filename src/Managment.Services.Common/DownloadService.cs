@@ -16,6 +16,12 @@ namespace Managment.Services.Common
 {
     public class DownloadService : IDownloadService
     {
+        #region Events
+
+        public event DownloadSourceStartedEventHandler RaiseDownloadSourceStartedEvent;
+        public event DownloadSourceFinishedEventHandler RaiseDownloadSourceFinishedEvent;
+
+        #endregion
 
         #region Services
 
@@ -59,14 +65,25 @@ namespace Managment.Services.Common
 
         #region Public methods
 
-        public async Task DownloadSourceToBuildFolders()
+        public async Task DownloadSource()
         {
+            OnRaiseDownloadSourceStartedEvent();
+
             DirectoryUtilites.CreateOrClearDirectory(mSourceBuildPath);
 
             await ReadServiceRepositoryFile();
             await DownloadZipFromRepositoryAsync();
             await ExtractSourceFiles();
             await CopySourceFilesToBuildFolder();
+
+            OnRaiseDownloadSourceFinishedEvent();
+        }
+
+        public void Dispose()
+        {
+            mLogger.LogInformation("=== DownloadService. Dispose ===");
+            DirectoryUtilites.CreateOrClearDirectory(mSourceDownloadPath);
+            mServiceRepositories.Clear();
         }
 
         #endregion
@@ -205,11 +222,20 @@ namespace Managment.Services.Common
             mLogger.LogInformation("=== Step 4. Copy Source Files To Build Folder Finish ===");
         }
 
-        public void Dispose()
+        #endregion
+
+        #region OnRaise events
+
+        protected virtual void OnRaiseDownloadSourceStartedEvent()
         {
-            mLogger.LogInformation("=== DownloadService. Dispose ===");
-            DirectoryUtilites.CreateOrClearDirectory(mSourceDownloadPath);
-            mServiceRepositories.Clear();
+            DownloadSourceStartedEventHandler raiseEvent = RaiseDownloadSourceStartedEvent;
+            raiseEvent?.Invoke(this);
+        }
+
+        protected virtual void OnRaiseDownloadSourceFinishedEvent()
+        {
+            DownloadSourceFinishedEventHandler raiseEvent = RaiseDownloadSourceFinishedEvent;
+            raiseEvent?.Invoke(this);
         }
 
         #endregion

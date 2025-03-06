@@ -14,6 +14,13 @@ namespace Managment.Services.Common
 {
     public class UpdateService : IUpdateService
     {
+        #region Events
+
+        public event CheckUpdateStartedEventHandler RaiseCheckUpdateStartedEvent;
+        public event CheckUpdateFinishedEventHandler RaiseCheckUpdateFinishedEvent;
+
+        #endregion
+
         #region Services
 
         private readonly ILogger<UpdateService> mLogger;
@@ -29,13 +36,6 @@ namespace Managment.Services.Common
         private readonly string mDownloadInfoFilesNamePath;
         private readonly string mDownloadRepositoriesFilesNamePath;
         private readonly string mDownloadPath;
-
-        #endregion
-
-        #region Events
-
-        public event CheckUpdateStartedEventHandler RaiseCheckUpdateStartedEvent;
-        public event CheckUpdateFinishedEventHandler RaiseCheckUpdateFinishedEvent;
 
         #endregion
 
@@ -241,14 +241,14 @@ namespace Managment.Services.Common
 
         protected virtual  void OnRaiseCheckUpdateStartedEvent()
         {
-            CheckUpdateStartedEventHandler raiseEvents = RaiseCheckUpdateStartedEvent;
-            raiseEvents?.Invoke(this);
+            CheckUpdateStartedEventHandler raiseEvent = RaiseCheckUpdateStartedEvent;
+            raiseEvent?.Invoke(this);
         }
 
         protected virtual void OnRaiseCheckUpdateFinishedEvent()
         {
-            CheckUpdateFinishedEventHandler raiseEvents = RaiseCheckUpdateFinishedEvent;
-            raiseEvents?.Invoke(this);
+            CheckUpdateFinishedEventHandler raiseEvent = RaiseCheckUpdateFinishedEvent;
+            raiseEvent?.Invoke(this);
         }
 
         #endregion
