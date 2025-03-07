@@ -70,6 +70,7 @@ namespace Managment.Services.Common
             OnRaiseDownloadSourceStartedEvent();
 
             DirectoryUtilites.CreateOrClearDirectory(mSourceBuildPath);
+            DirectoryUtilites.CreateOrClearDirectory(mSourceDownloadPath);
 
             await ReadServiceRepositoryFile();
             await DownloadZipFromRepositoryAsync();
@@ -82,7 +83,10 @@ namespace Managment.Services.Common
         public void Dispose()
         {
             mLogger.LogInformation("=== DownloadService. Dispose ===");
+
             DirectoryUtilites.CreateOrClearDirectory(mSourceDownloadPath);
+            DirectoryUtilites.CreateOrClearDirectory(mSourceBuildPath);
+
             mServiceRepositories.Clear();
         }
 

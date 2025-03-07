@@ -3,9 +3,8 @@ using System.Threading.Tasks;
 
 namespace Managment.Interface
 {
-    public interface IBuildService : IDisposable
+    public interface IDotnetService : IDisposable
     {
-        public Task TryExecute();
         public Task PublishAsync();
     }
 }

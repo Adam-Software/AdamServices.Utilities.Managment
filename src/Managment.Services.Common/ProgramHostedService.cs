@@ -17,7 +17,7 @@ namespace Managment.Services.Common
         private readonly IUpdateService mUpdateService;
         private readonly IAppArguments mAppArguments;
         private readonly IDownloadService mDownloadService;
-        private readonly IBuildService mBuildService;
+        private readonly IDotnetService mDotnetService;
 
         #endregion
 
@@ -37,7 +37,7 @@ namespace Managment.Services.Common
             mAppArguments = serviceProvider.GetRequiredService<IAppArguments>();
             mUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
             mDownloadService = serviceProvider.GetRequiredService<IDownloadService>();
-            mBuildService = serviceProvider.GetRequiredService<IBuildService>();
+            mDotnetService = serviceProvider.GetRequiredService<IDotnetService>();
 
 
             var appLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
@@ -139,9 +139,9 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in installation mode");
 
-                //await mUpdateService.CheckUpdates();
-                //await mDownloadService.DownloadSource();
-                await mBuildService.PublishAsync();
+                await mUpdateService.CheckUpdates();
+                await mDownloadService.DownloadSource();
+                await mDotnetService.PublishAsync();
             }
         }
 

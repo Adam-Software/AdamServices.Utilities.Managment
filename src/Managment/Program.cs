@@ -52,7 +52,7 @@ namespace Managment
                         services.AddSingleton<IDownloadService, DownloadService>();
 
                         if(OperatingSystem.IsWindows()) 
-                            services.AddSingleton<IBuildService, BuildService>();
+                            services.AddSingleton<IDotnetService, DotnetService>();
 
                         services.AddHostedService<ProgramHostedService>();
                     })

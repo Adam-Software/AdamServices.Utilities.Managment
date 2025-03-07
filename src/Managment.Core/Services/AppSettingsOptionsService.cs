@@ -8,6 +8,6 @@ namespace Managment.Core.Services
         public GitHubClientServiceSettings GitHubClientServiceSettings { get; set; }
         public UpdateServiceSettings UpdateServiceSettings { get; set; }
         public DownloadServiceSettings DownloadServiceSettings {  set; get; }
-
+        public DotnetServiceSettings DotnetServiceSettings { get ; set ; }
     }
 }

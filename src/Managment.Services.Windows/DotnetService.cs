@@ -6,34 +6,35 @@ using System.Diagnostics;
 
 namespace Managment.Services.Windows
 {
-    public class BuildService : IBuildService
+    public class DotnetService : IDotnetService
     {
         #region Services
 
-        private readonly ILogger<BuildService> mLogger;
+        private readonly ILogger<DotnetService> mLogger;
 
         #endregion
 
         #region Const
 
-        private const string cPublishPath = "release";
+        
 
         #endregion
 
         #region Var
 
         private readonly string mSourceBuildPath = "build";
-
+        private readonly string mPublishPath = "release";
         #endregion
 
         #region ~
 
-        public BuildService(IServiceProvider serviceProvider)
+        public DotnetService(IServiceProvider serviceProvider)
         {
-            mLogger = serviceProvider.GetRequiredService<ILogger<BuildService>>();
+            mLogger = serviceProvider.GetRequiredService<ILogger<DotnetService>>();
 
             IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
             mSourceBuildPath = appSettingsOptionsService.DownloadServiceSettings.SourceBuildPath;
+            mPublishPath = appSettingsOptionsService.DotnetServiceSettings.PublishPath;
 
             mLogger.LogInformation("=== BuildService. Start ===");
         }
@@ -52,11 +53,6 @@ namespace Managment.Services.Windows
             }
         }
 
-        public Task TryExecute()
-        {
-            throw new NotImplementedException();
-        }
-
         public void Dispose()
         {
             mLogger.LogInformation("=== BuildService. Dispose ===");
@@ -72,7 +68,7 @@ namespace Managment.Services.Windows
             var sourceFullPath = new DirectoryInfo(sourcePathTemp).FullName;
             mLogger.LogTrace("{buildFullPath}", sourceFullPath);
 
-            string publishPathTemp = Path.Combine(cPublishPath, sourcePath);
+            string publishPathTemp = Path.Combine(mPublishPath, sourcePath);
             var publishFullPath = new DirectoryInfo(publishPathTemp).FullName;
             string args = string.Format($"publish --source {sourceFullPath} --output {publishFullPath}");
 
@@ -87,7 +83,7 @@ namespace Managment.Services.Windows
             }
         }
 
-        private Task StartProcessAsync(string command, string workingDirectory, string arguments)
+        private Task StartProcessAsync(string command = "dotnet", string workingDirectory = "", string arguments = "")
         {
             ProcessStartInfo proccesInfo = new()
             {
