@@ -33,8 +33,8 @@ namespace Managment.Services.Common
         
         private readonly List<ServiceRepositoryModel> mSettingsServiceRepositories;
         private readonly List<ServiceRepositoryModel> mServiceRepositories;
-        private readonly string mDownloadInfoFilesNamePath;
-        private readonly string mDownloadRepositoriesFilesNamePath;
+        //private readonly string mDownloadInfoFilesNamePath;
+        //private readonly string mDownloadRepositoriesFilesNamePath;
         private readonly string mDownloadPath;
 
         #endregion
@@ -54,8 +54,8 @@ namespace Managment.Services.Common
             mServiceRepositories = [];
 
             mDownloadPath = appSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath;
-            mDownloadInfoFilesNamePath = appSettingsOptionsService.UpdateServiceSettings.DownloadInfoFilesNamePath;
-            mDownloadRepositoriesFilesNamePath = appSettingsOptionsService.UpdateServiceSettings.DownloadRepositoriesFilesNamePath;
+            //mDownloadInfoFilesNamePath = ServiceFileNames.DownloadInfoFilesNamePath;
+            //mDownloadRepositoriesFilesNamePath = ServiceFileNames.DownloadRepositoriesFilesNamePath;
 
             mLogger.LogInformation("=== UpdateService. Start ===");
         }
@@ -170,8 +170,8 @@ namespace Managment.Services.Common
 
             if (repositoryInfoFilesName.Count > 0) 
             {
-                await JsonUtilites.SerializeAndSaveJsonFilesAsync(repositoryInfoFilesName, mDownloadPath, mDownloadRepositoriesFilesNamePath);
-                mLogger.LogInformation("Create repeository file name {FilesNamePath}", mDownloadRepositoriesFilesNamePath);
+                await JsonUtilites.SerializeAndSaveJsonFilesAsync(repositoryInfoFilesName, mDownloadPath, ServiceFileNames.DownloadRepositoriesFilesNamePath);
+                mLogger.LogInformation("Create repeository file name {FilesNamePath}", ServiceFileNames.DownloadRepositoriesFilesNamePath);
             }
 
             mLogger.LogInformation("=== Step 2. Check Repositories Info Files Finished ===");
@@ -220,8 +220,8 @@ namespace Managment.Services.Common
 
             if (serviceInfoFilesName.Count > 0)
             {
-                await JsonUtilites.SerializeAndSaveJsonFilesAsync(serviceInfoFilesName, mDownloadPath, mDownloadInfoFilesNamePath);
-                mLogger.LogInformation("Create service info file name {FilesNamePath}", mDownloadInfoFilesNamePath);
+                await JsonUtilites.SerializeAndSaveJsonFilesAsync(serviceInfoFilesName, mDownloadPath, ServiceFileNames.DownloadInfoFilesNamePath);
+                mLogger.LogInformation("Create service info file name {FilesNamePath}", ServiceFileNames.DownloadInfoFilesNamePath);
             }
 
             mLogger.LogInformation("=== Step 3. Download Service Info Files Finished ===");

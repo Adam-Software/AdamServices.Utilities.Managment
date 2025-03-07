@@ -102,7 +102,7 @@ namespace Managment.Services.Common
 
             try
             {
-                List<string> repositories = await JsonUtilites.ReadJsonFileAsync<List<string>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, mAppSettingsOptionsService.UpdateServiceSettings.DownloadRepositoriesFilesNamePath);
+                List<string> repositories = await JsonUtilites.ReadJsonFileAsync<List<string>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, ServiceFileNames.DownloadRepositoriesFilesNamePath);
                 
                 foreach (string repository in repositories)
                 {
@@ -221,8 +221,8 @@ namespace Managment.Services.Common
             {
                 mLogger.LogError("{error}", ex.Message);
             }
-
-            await JsonUtilites.SerializeAndSaveJsonFilesAsync(buildTargetPaths, mSourceBuildPath, "build-target-path-list.json");
+            
+            await JsonUtilites.SerializeAndSaveJsonFilesAsync(buildTargetPaths, mSourceBuildPath, ServiceFileNames.BuildTargetPathList);
             mLogger.LogInformation("=== Step 4. Copy Source Files To Build Folder Finish ===");
         }
 

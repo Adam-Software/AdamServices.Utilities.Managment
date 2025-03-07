@@ -24,6 +24,8 @@ namespace Managment.Services.Windows
 
         private readonly string mSourceBuildPath = "build";
         private readonly string mPublishPath = "release";
+        private readonly string mDotnetVerbosityLevel = "q";
+        private readonly List<string> mBuildLogs = [];
         #endregion
 
         #region ~
@@ -35,8 +37,9 @@ namespace Managment.Services.Windows
             IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
             mSourceBuildPath = appSettingsOptionsService.DownloadServiceSettings.SourceBuildPath;
             mPublishPath = appSettingsOptionsService.DotnetServiceSettings.PublishPath;
+            mDotnetVerbosityLevel = appSettingsOptionsService.DotnetServiceSettings.DotnetVerbosityLevel;
 
-            mLogger.LogInformation("=== BuildService. Start ===");
+            mLogger.LogInformation("=== DotnetService. Start ===");
         }
 
         #endregion
@@ -45,7 +48,7 @@ namespace Managment.Services.Windows
 
         public async Task PublishAsync()
         {
-            List<string> sourcePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mSourceBuildPath, "build-target-path-list.json");
+            List<string> sourcePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mSourceBuildPath, ServiceFileNames.BuildTargetPathList);
 
             foreach (string sourcePath in sourcePaths)
             {
@@ -66,16 +69,37 @@ namespace Managment.Services.Windows
         {
             var sourcePathTemp = Path.Combine(mSourceBuildPath, sourcePath);
             var sourceFullPath = new DirectoryInfo(sourcePathTemp).FullName;
-            mLogger.LogTrace("{buildFullPath}", sourceFullPath);
 
             string publishPathTemp = Path.Combine(mPublishPath, sourcePath);
             var publishFullPath = new DirectoryInfo(publishPathTemp).FullName;
-            string args = string.Format($"publish --source {sourceFullPath} --output {publishFullPath}");
+
+            var dotnetVerbosityLevel = mDotnetVerbosityLevel;
+            if (dotnetVerbosityLevel.ToLower().Equals("o"))
+                dotnetVerbosityLevel = "q";
+
+            string args = string.Format($"publish -v {dotnetVerbosityLevel} --source {sourceFullPath} --output {publishFullPath}");
+
+            mLogger.LogInformation("Build and publish {projectName} to {publishFullPath} started", sourcePath, publishFullPath);
 
             try
             {
+                mBuildLogs.Clear();
                 DirectoryUtilites.CreateOrClearDirectory(publishFullPath);
-                await StartProcessAsync("dotnet", sourceFullPath, args);
+                
+                int exitCode = await Task.Run(() => StartProcessAsync(workingDirectory: sourceFullPath, arguments: args));
+
+                if(exitCode != 0 && mDotnetVerbosityLevel.ToLower().Equals("o"))
+                {
+                    mLogger.LogError("Build {projectName} finished with eror code {exitCode}. The project build log will be shown below.", sourcePath, exitCode);
+
+                    mBuildLogs.ForEach(message =>
+                    {
+                        mLogger.LogError("{buildLogMessage}", message);
+                    });
+                }
+                    
+
+                mLogger.LogInformation("Publish {projectName} finished with code {exitCode}", sourcePath, exitCode);
             }
             catch (Exception ex) 
             {
@@ -83,7 +107,7 @@ namespace Managment.Services.Windows
             }
         }
 
-        private Task StartProcessAsync(string command = "dotnet", string workingDirectory = "", string arguments = "")
+        private int StartProcessAsync(string command = "dotnet", string workingDirectory = "", string arguments = "")
         {
             ProcessStartInfo proccesInfo = new()
             {
@@ -105,16 +129,19 @@ namespace Managment.Services.Windows
             process.Exited += ProcessExited;
             process.OutputDataReceived += ProcessOutputDataReceived;
             process.ErrorDataReceived += ProcessErrorDataReceived;
+            
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
             process.WaitForExit();
-            return process.WaitForExitAsync();
+
+            return process.ExitCode;
         }
 
         private void ProcessExited(object? sender, EventArgs e)
         {
-            mLogger.LogInformation("MSBUILD: exited"); 
+            if(!mDotnetVerbosityLevel.ToLower().Equals("o"))
+                mLogger.LogInformation("[DOTNET]: exited"); 
         }
 
         private void ProcessOutputDataReceived(object sender, DataReceivedEventArgs e)
@@ -122,7 +149,12 @@ namespace Managment.Services.Windows
             var message = e.Data;
 
             if(!string.IsNullOrEmpty(message))
-                mLogger.LogInformation("MSBUILD: {data}", e.Data);
+            {
+                mBuildLogs.Add(message);
+
+                if (!mDotnetVerbosityLevel.ToLower().Equals("o"))
+                    mLogger.LogInformation("[DOTNET]: {data}", e.Data);
+            }
         }
 
         private void ProcessErrorDataReceived(object sender, DataReceivedEventArgs e)
@@ -130,7 +162,11 @@ namespace Managment.Services.Windows
             var message = e.Data;
 
             if (!string.IsNullOrEmpty(message))
-                mLogger.LogError("MSBUILD: {data}", e.Data);
+            {
+                mBuildLogs.Add(message);
+                mLogger.LogError("[DOTNET]: {data}", e.Data);
+            }
+                
         }
 
         #endregion
