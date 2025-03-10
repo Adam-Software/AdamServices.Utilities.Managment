@@ -51,8 +51,8 @@ namespace Managment
                         services.AddSingleton<IUpdateService, UpdateService>();
                         services.AddSingleton<IDownloadService, DownloadService>();
 
-                        if(OperatingSystem.IsWindows()) 
-                            services.AddSingleton<IDotnetService, DotnetService>();
+                        //if(OperatingSystem.IsWindows()) 
+                        services.AddSingleton<IDotnetService, DotnetService>();
 
                         services.AddHostedService<ProgramHostedService>();
                     })
