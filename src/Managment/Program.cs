@@ -2,7 +2,6 @@
 using Managment.Core.Services;
 using Managment.Interface;
 using Managment.Services.Common;
-using Managment.Services.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

@@ -21,7 +21,6 @@
     <ProjectReference Include="..\Managment.Core\Managment.Core.csproj" />
     <ProjectReference Include="..\Managment.Interface\Managment.Interface.csproj" />
     <ProjectReference Include="..\Managment.Services.Common\Managment.Services.Common.csproj" />
-    <ProjectReference Include="..\Managment.Services.Windows\Managment.Services.Windows.csproj" />
   </ItemGroup>
 
 </Project>

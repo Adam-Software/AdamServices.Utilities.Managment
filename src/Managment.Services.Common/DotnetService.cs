@@ -2,9 +2,13 @@
 using Managment.Interface.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
 
-namespace Managment.Services.Windows
+namespace Managment.Services.Common
 {
     public class DotnetService : IDotnetService
     {
@@ -167,6 +171,11 @@ namespace Managment.Services.Windows
                 mLogger.LogError("[DOTNET]: {data}", e.Data);
             }
                 
+        }
+
+        Task IDotnetService.PublishAsync()
+        {
+            throw new System.NotImplementedException();
         }
 
         #endregion
