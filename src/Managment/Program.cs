@@ -15,20 +15,20 @@ namespace Managment
 {
     internal class Program
     {
-        static Task Main(string[] args)
+        static async Task Main(string[] args)
         {
-            IHost host = Host.CreateDefaultBuilder(args)
+            var host = Host.CreateDefaultBuilder(args)
                     .ConfigureAppConfiguration((context, config) =>
                     {
                         config.Sources.Clear();
                         config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
                     })
-                    
+
                     .ConfigureServices((context, services) =>
                     {
                         Parser.Default.ParseArguments<AppArguments>(args).WithParsed(appArgs =>
                         {
-                            services.AddSingleton<IAppArguments>(appArgs);  
+                            services.AddSingleton<IAppArguments>(appArgs);
                         });
 
                         AppSettingsOptionsService options = new();
@@ -46,22 +46,23 @@ namespace Managment
                             loggingBuilder.AddSerilog(logger, dispose: true);
                         });
 
+                        services.Configure<HostOptions>(option =>
+                        {
+                            option.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.StopHost;
+                            option.ShutdownTimeout = TimeSpan.FromSeconds(5);
+                        });
+
                         services.AddSingleton<IGitHubCilentService, GitHubCilentService>();
                         services.AddSingleton<IUpdateService, UpdateService>();
                         services.AddSingleton<IDownloadService, DownloadService>();
-
-                        //if(OperatingSystem.IsWindows()) 
                         services.AddSingleton<IDotnetService, DotnetService>();
 
                         services.AddHostedService<ProgramHostedService>();
                     })
 
                     .Build();
-            
-            
-            return host.RunAsync();
-            
 
+            await host.RunAsync();
         }
     }
 }

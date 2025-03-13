@@ -1,11 +1,13 @@
 ﻿using Managment.Interface;
 using Managment.Interface.Common;
+using Managment.Interface.Common.JsonModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Managment.Services.Common
@@ -30,6 +32,7 @@ namespace Managment.Services.Common
         private readonly string mPublishPath = "release";
         private readonly string mDotnetVerbosityLevel = "q";
         private readonly List<string> mBuildLogs = [];
+        private readonly List<string> mSuccessBuildExecPaths = [];
         #endregion
 
         #region ~
@@ -39,6 +42,7 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<DotnetService>>();
 
             IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
+
             mSourceBuildPath = appSettingsOptionsService.DownloadServiceSettings.SourceBuildPath;
             mPublishPath = appSettingsOptionsService.DotnetServiceSettings.PublishPath;
             mDotnetVerbosityLevel = appSettingsOptionsService.DotnetServiceSettings.DotnetVerbosityLevel;
@@ -50,26 +54,75 @@ namespace Managment.Services.Common
 
         #region Public methods
 
-        public async Task PublishAsync()
+        public async Task PublishAsync(CancellationToken cancellationToken)
         {
-            List<string> sourcePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mSourceBuildPath, ServiceFileNames.BuildTargetPathList);
-
-            foreach (string sourcePath in sourcePaths)
+            try
             {
-                await StartDotnetPublishProcessAsync(sourcePath);
+                List<string> sourcePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mSourceBuildPath, ServiceFileNames.BuildTargetPathList);
+
+                foreach (string sourcePath in sourcePaths)
+                {
+                    await StartDotnetPublishAsync(sourcePath, cancellationToken);
+                }
             }
+            catch (Exception ex) 
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+        }
+
+        public Task RunAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                List<string> execPaths = JsonUtilites.ReadJsonFileAsync<List<string>>(mPublishPath, ServiceFileNames.ServiceExecPaths).Result;
+
+                foreach (string execPath in execPaths)
+                {
+                    _ = StartDotnetExecAsync(exeсPath: execPath, cancellationToken: cancellationToken);
+                }
+            }
+            catch (Exception ex) 
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+
+            return Task.CompletedTask;
         }
 
         public void Dispose()
         {
-            mLogger.LogInformation("=== BuildService. Dispose ===");
+            mLogger.LogInformation("=== DotnetService. Dispose ===");
         }
 
         #endregion
 
-        #region Private mehods
+        #region Private methods
 
-        private async Task StartDotnetPublishProcessAsync(string sourcePath)
+        private async Task StartDotnetExecAsync(string exeсPath, CancellationToken cancellationToken)
+        {
+            string args = string.Format($"exec {exeсPath}");
+            string workingDirectory = Path.GetDirectoryName(exeсPath);
+
+            string projectName = Path.GetFileNameWithoutExtension(exeсPath);
+            mLogger.LogInformation("Run {projectName}", projectName);
+
+            try
+            {
+                await StartProcess(arguments: args, workingDirectory: workingDirectory, cancellationToken: cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                mLogger.LogInformation("{projectName} was canceled", projectName);
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+        }
+
+
+        private async Task StartDotnetPublishAsync(string sourcePath, CancellationToken cancellationToken)
         {
             var sourcePathTemp = Path.Combine(mSourceBuildPath, sourcePath);
             var sourceFullPath = new DirectoryInfo(sourcePathTemp).FullName;
@@ -90,7 +143,7 @@ namespace Managment.Services.Common
                 mBuildLogs.Clear();
                 DirectoryUtilites.CreateOrClearDirectory(publishFullPath);
                 
-                int exitCode = await Task.Run(() => StartProcessAsync(workingDirectory: sourceFullPath, arguments: args));
+                int exitCode = await StartProcess(workingDirectory: sourceFullPath, arguments: args, cancellationToken: cancellationToken);
 
                 if(exitCode != 0 && mDotnetVerbosityLevel.ToLower().Equals("o"))
                 {
@@ -101,8 +154,22 @@ namespace Managment.Services.Common
                         mLogger.LogError("{buildLogMessage}", message);
                     });
                 }
-                    
 
+                if (exitCode == 0) 
+                {
+                    var projectName = JsonUtilites.ReadJsonFileAsync<ServiceInfoModel>(sourceFullPath, "service_info.json").Result.Services.Name;
+
+                    if (!string.IsNullOrEmpty(projectName)) 
+                    {
+                        string execProjectName = $"{projectName}.dll";
+                        string serviceExecPath = Path.Combine(publishFullPath, execProjectName);
+                        mSuccessBuildExecPaths.Add(serviceExecPath);
+                    }   
+                }
+
+                if(mSuccessBuildExecPaths.Count > 0) 
+                    await JsonUtilites.SerializeAndSaveJsonFilesAsync(mSuccessBuildExecPaths, mPublishPath, ServiceFileNames.ServiceExecPaths);
+                
                 mLogger.LogInformation("Publish {projectName} finished with code {exitCode}", sourcePath, exitCode);
             }
             catch (Exception ex) 
@@ -111,7 +178,8 @@ namespace Managment.Services.Common
             }
         }
 
-        private int StartProcessAsync(string command = "dotnet", string workingDirectory = "", string arguments = "")
+        
+        private async Task<int> StartProcess(string command = "dotnet", string workingDirectory = "", string arguments = "", CancellationToken cancellationToken = default)
         {
             ProcessStartInfo proccesInfo = new()
             {
@@ -130,19 +198,27 @@ namespace Managment.Services.Common
                 EnableRaisingEvents = true,
             };
 
+            
             process.Exited += ProcessExited;
             process.OutputDataReceived += ProcessOutputDataReceived;
             process.ErrorDataReceived += ProcessErrorDataReceived;
-            
+                        
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-            process.WaitForExit();
+
+            cancellationToken.Register(() => 
+            {
+                process.Kill();
+            });
+
+            
+            await process.WaitForExitAsync(cancellationToken);
 
             return process.ExitCode;
         }
 
-        private void ProcessExited(object? sender, EventArgs e)
+        private void ProcessExited(object sender, EventArgs e)
         {
             if(!mDotnetVerbosityLevel.ToLower().Equals("o"))
                 mLogger.LogInformation("[DOTNET]: exited"); 
@@ -171,11 +247,6 @@ namespace Managment.Services.Common
                 mLogger.LogError("[DOTNET]: {data}", e.Data);
             }
                 
-        }
-
-        Task IDotnetService.PublishAsync()
-        {
-            throw new System.NotImplementedException();
         }
 
         #endregion

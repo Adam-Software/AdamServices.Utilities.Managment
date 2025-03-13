@@ -33,8 +33,6 @@ namespace Managment.Services.Common
         
         private readonly List<ServiceRepositoryModel> mSettingsServiceRepositories;
         private readonly List<ServiceRepositoryModel> mServiceRepositories;
-        //private readonly string mDownloadInfoFilesNamePath;
-        //private readonly string mDownloadRepositoriesFilesNamePath;
         private readonly string mDownloadPath;
 
         #endregion
@@ -54,8 +52,6 @@ namespace Managment.Services.Common
             mServiceRepositories = [];
 
             mDownloadPath = appSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath;
-            //mDownloadInfoFilesNamePath = ServiceFileNames.DownloadInfoFilesNamePath;
-            //mDownloadRepositoriesFilesNamePath = ServiceFileNames.DownloadRepositoriesFilesNamePath;
 
             mLogger.LogInformation("=== UpdateService. Start ===");
         }

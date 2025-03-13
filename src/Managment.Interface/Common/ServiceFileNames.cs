@@ -6,5 +6,6 @@
         public const string DownloadInfoFilesNamePath = "download-info-files-name-list.json";
         public const string DownloadRepositoriesFilesNamePath  = "download-repositories-files-name-list.json";
 
+        public const string ServiceExecPaths = "service_exec_paths.json";
     }
 }

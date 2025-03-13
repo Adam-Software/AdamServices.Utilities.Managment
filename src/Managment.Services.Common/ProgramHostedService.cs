@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Managment.Services.Common
 {
-    public sealed class ProgramHostedService : IHostedService, IHostedLifecycleService
+    public sealed class ProgramHostedService : IHostedService, IHostedLifecycleService, IDisposable
     {
         #region Services
 
@@ -19,11 +19,15 @@ namespace Managment.Services.Common
         private readonly IDownloadService mDownloadService;
         private readonly IDotnetService mDotnetService;
 
+        private readonly IHostApplicationLifetime mAppLifetime;
+
         #endregion
 
         #region Var
 
         private readonly Task mCompletedTask = Task.CompletedTask;
+        private readonly CancellationTokenSource mCancellationSource = new();
+        private bool mIsDisposed = false;
 
         #endregion
 
@@ -38,20 +42,22 @@ namespace Managment.Services.Common
             mUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
             mDownloadService = serviceProvider.GetRequiredService<IDownloadService>();
             mDotnetService = serviceProvider.GetRequiredService<IDotnetService>();
+            mAppLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
 
-
-            var appLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
-
-            appLifetime.ApplicationStarted.Register(OnStarted);
-            appLifetime.ApplicationStopping.Register(OnStopping);
-            appLifetime.ApplicationStopped.Register(OnStopped);
-
+            Register();
             Subscribe();
         }
 
         #endregion
 
-        #region Subscribe/Unsubscribe
+        #region Subscribe/Unsubscribe and register
+
+        private void Register()
+        {
+            mAppLifetime.ApplicationStarted.Register(OnStarted);
+            mAppLifetime.ApplicationStopping.Register(OnStopping);
+            mAppLifetime.ApplicationStopped.Register(OnStopped);
+        }
 
         private void Subscribe()
         {
@@ -59,6 +65,8 @@ namespace Managment.Services.Common
             mUpdateService.RaiseCheckUpdateFinishedEvent += RaiseCheckUpdateFinishedEvent;
             mDownloadService.RaiseDownloadSourceStartedEvent += RaiseDownloadSourceStartedEvent;
             mDownloadService.RaiseDownloadSourceFinishedEvent += RaiseDownloadSourceFinishedEvent;
+
+            AppDomain.CurrentDomain.ProcessExit += ProcessExit;
         }
 
         private void Unsubscribe()
@@ -67,6 +75,8 @@ namespace Managment.Services.Common
             mUpdateService.RaiseCheckUpdateFinishedEvent -= RaiseCheckUpdateFinishedEvent;
             mDownloadService.RaiseDownloadSourceStartedEvent -= RaiseDownloadSourceStartedEvent;
             mDownloadService.RaiseDownloadSourceFinishedEvent -= RaiseDownloadSourceFinishedEvent;
+
+            AppDomain.CurrentDomain.ProcessExit += ProcessExit;
         }
 
         #endregion
@@ -93,6 +103,12 @@ namespace Managment.Services.Common
             mLogger.LogTrace("=== Raise DownloadSourceFinished Event ===");
         }
 
+
+        private void ProcessExit(object sender, EventArgs e)
+        {
+            mAppLifetime.StopApplication();
+        }
+
         #endregion
 
         public Task StartingAsync(CancellationToken cancellationToken)
@@ -112,13 +128,6 @@ namespace Managment.Services.Common
         public Task StartedAsync(CancellationToken cancellationToken)
         {
             mLogger.LogTrace("3. StartedAsync has been called.");
-            
-            return mCompletedTask;
-        }
-
-        private async void OnStarted()
-        {
-            mLogger.LogTrace("4. OnStarted has been called.");
 
             if ((mAppArguments.Install & mAppArguments.Update) || (!mAppArguments.Install & !mAppArguments.Update))
             {
@@ -127,45 +136,54 @@ namespace Managment.Services.Common
                 mLogger.LogWarning("Arguments are specified:");
                 mLogger.LogWarning("Install mode: {install}", mAppArguments.Install);
                 mLogger.LogWarning("Update mode: {update}", mAppArguments.Update);
-                return;
+                return Task.CompletedTask;
             }
 
             if (mAppArguments.Update)
             {
                 mLogger.LogInformation("The application is running in update mode");
+
+                return Task.CompletedTask;
             }
 
             if (mAppArguments.Install)
             {
                 mLogger.LogInformation("The application is running in installation mode");
 
-                await mUpdateService.CheckUpdates();
-                await mDownloadService.DownloadSource();
-                await mDotnetService.PublishAsync();
+                mUpdateService.CheckUpdates().Wait(CancellationToken.None);
+                mDownloadService.DownloadSource().Wait(CancellationToken.None);
+
+                mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
+                mDotnetService.RunAsync(mCancellationSource.Token);
+
+                return Task.CompletedTask;
             }
+
+            return Task.CompletedTask;
+        }
+
+        private void OnStarted()
+        {
+            mLogger.LogTrace("4. OnStarted has been called.");
+
         }
 
         private void OnStopping()
         {
-            Unsubscribe();
-            mUpdateService.Dispose();
-            mDownloadService.Dispose();
-
             mLogger.LogTrace("5. OnStopping has been called.");
+            Dispose();
         }
 
 
         public Task StoppingAsync(CancellationToken cancellationToken)
         {
             mLogger.LogTrace("6. StoppingAsync has been called.");
-
             return mCompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
             mLogger.LogTrace("7. StopAsync has been called.");
-            
             return mCompletedTask;
         }
 
@@ -178,6 +196,30 @@ namespace Managment.Services.Common
         private void OnStopped()
         {
             mLogger.LogTrace("9. OnStopped has been called.");
+        }
+
+        public void Dispose(bool disposing)
+        {
+            if (mIsDisposed) return;
+
+            if (disposing)
+            {
+                mCancellationSource.Cancel();
+
+                Unsubscribe();
+
+                mDotnetService.Dispose();
+                mUpdateService.Dispose();
+                mDownloadService.Dispose();
+            }
+
+            mIsDisposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

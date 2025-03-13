@@ -84,10 +84,18 @@ namespace Managment.Services.Common
         {
             mLogger.LogInformation("=== DownloadService. Dispose ===");
 
-            DirectoryUtilites.CreateOrClearDirectory(mSourceDownloadPath);
-            DirectoryUtilites.CreateOrClearDirectory(mSourceBuildPath);
+            try
+            {
+                DirectoryUtilites.CreateOrClearDirectory(mSourceDownloadPath);
+                DirectoryUtilites.CreateOrClearDirectory(mSourceBuildPath);
 
-            mServiceRepositories.Clear();
+                mServiceRepositories.Clear();
+            }
+            catch(Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+            
         }
 
         #endregion
@@ -179,6 +187,7 @@ namespace Managment.Services.Common
 
                     ZipArchive zipArchive = ZipFile.OpenRead(zipArchiveFilePath);
                     zipArchive.ExtractToDirectory(extractPath, true);
+                    zipArchive.Dispose();
 
                     extractArchiveFolders.Add(extractPath);
                     mLogger.LogInformation("{counter}. {zipArchiveFilePath} extracted to dirrectory {extractPath}", i, zipArchiveFilePath, extractPath);
