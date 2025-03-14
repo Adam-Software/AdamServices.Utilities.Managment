@@ -15,10 +15,9 @@ namespace Managment.Services.Common
         private readonly ILogger<ProgramHostedService> mLogger;
         private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
         private readonly IUpdateService mUpdateService;
-        private readonly IAppArguments mAppArguments;
         private readonly IDownloadService mDownloadService;
         private readonly IDotnetService mDotnetService;
-
+        private readonly IAppArguments mAppArguments;
         private readonly IHostApplicationLifetime mAppLifetime;
 
         #endregion
@@ -38,11 +37,12 @@ namespace Managment.Services.Common
             mLogger = serviceProvider.GetRequiredService<ILogger<ProgramHostedService>>();
 
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
-            mAppArguments = serviceProvider.GetRequiredService<IAppArguments>();
             mUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
             mDownloadService = serviceProvider.GetRequiredService<IDownloadService>();
             mDotnetService = serviceProvider.GetRequiredService<IDotnetService>();
             mAppLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
+
+            mAppArguments = serviceProvider.GetService<IAppArguments>();
 
             Register();
             Subscribe();
@@ -129,13 +129,16 @@ namespace Managment.Services.Common
         {
             mLogger.LogTrace("3. StartedAsync has been called.");
 
-            if ((mAppArguments.Install & mAppArguments.Update) || (!mAppArguments.Install & !mAppArguments.Update))
+            if (!mAppArguments.ValidateParameters())
             {
                 mLogger.LogWarning("The arguments are specified incorrectly, or not specified at all. I don't know what to do better");
                 mLogger.LogWarning("I don't know what to do better. You need to specify one thing.");
                 mLogger.LogWarning("Arguments are specified:");
                 mLogger.LogWarning("Install mode: {install}", mAppArguments.Install);
                 mLogger.LogWarning("Update mode: {update}", mAppArguments.Update);
+                mLogger.LogWarning("Update mode: {run}", mAppArguments.Run);
+
+                mAppLifetime.StopApplication();
                 return Task.CompletedTask;
             }
 
@@ -156,6 +159,12 @@ namespace Managment.Services.Common
                 mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
                 mDotnetService.RunAsync(mCancellationSource.Token);
 
+                return Task.CompletedTask;
+            }
+
+            if (mAppArguments.Run)
+            {
+                mDotnetService.RunAsync(mCancellationSource.Token);
                 return Task.CompletedTask;
             }
 

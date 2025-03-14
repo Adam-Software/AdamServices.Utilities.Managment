@@ -26,11 +26,12 @@ namespace Managment
 
                     .ConfigureServices((context, services) =>
                     {
-                        Parser.Default.ParseArguments<AppArguments>(args).WithParsed(appArgs =>
-                        {
-                            services.AddSingleton<IAppArguments>(appArgs);
-                        });
-
+                        _ = Parser.Default.ParseArguments<AppArguments>(args)
+                            .WithParsed(appArgs =>
+                            {
+                                services.AddSingleton<IAppArguments>(appArgs);
+                            });
+                 
                         AppSettingsOptionsService options = new();
                         context.Configuration.GetRequiredSection("AppSettingsOptions").Bind(options);
 
@@ -63,6 +64,8 @@ namespace Managment
                     .Build();
 
             await host.RunAsync();
+            
+                
         }
     }
 }

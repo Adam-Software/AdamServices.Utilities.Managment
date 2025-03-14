@@ -2,7 +2,7 @@
   "profiles": {
     "Managment": {
       "commandName": "Project",
-      "commandLineArgs": "-i"
+      "commandLineArgs": "-r"
     }
   }
 }
