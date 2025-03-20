@@ -16,7 +16,8 @@ namespace Managment.Interface
 
         #region Methods
 
-        public Task CheckUpdates();
+        public Task DownloadUpdateInfoFiles();
+        public Task CheckUpdatesForInstalledProject();
 
         #endregion
     }

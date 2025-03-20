@@ -29,7 +29,7 @@ namespace Managment.Services.Common
         #region Var
 
         private readonly string mSourceBuildPath = "build";
-        private readonly string mPublishPath = "release";
+        private readonly string mPublishPath = "publish";
         private readonly string mDotnetVerbosityLevel = "q";
         private readonly List<string> mBuildLogs = [];
         private readonly List<string> mSuccessBuildExecPaths = [];
@@ -58,7 +58,7 @@ namespace Managment.Services.Common
         {
             try
             {
-                List<string> sourcePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mSourceBuildPath, ServiceFileNames.BuildTargetPathList);
+                List<string> sourcePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mSourceBuildPath, ServiceFileNames.BuildTargetPathsFileName);
 
                 foreach (string sourcePath in sourcePaths)
                 {
@@ -75,7 +75,7 @@ namespace Managment.Services.Common
         {
             try
             {
-                List<string> execPaths = JsonUtilites.ReadJsonFileAsync<List<string>>(mPublishPath, ServiceFileNames.ServiceExecPaths).Result;
+                List<string> execPaths = JsonUtilites.ReadJsonFileAsync<List<string>>(mPublishPath, ServiceFileNames.ServiceExecPathsFileName).Result;
 
                 foreach (string execPath in execPaths)
                 {
@@ -157,6 +157,8 @@ namespace Managment.Services.Common
 
                 if (exitCode == 0) 
                 {
+                    File.Copy(Path.Combine(sourceFullPath, "service_info.json"), Path.Combine(publishFullPath, "service_info.json"), true);
+
                     var projectName = JsonUtilites.ReadJsonFileAsync<ServiceInfoModel>(sourceFullPath, "service_info.json").Result.Services.Name;
 
                     if (!string.IsNullOrEmpty(projectName)) 
@@ -168,7 +170,7 @@ namespace Managment.Services.Common
                 }
 
                 if(mSuccessBuildExecPaths.Count > 0) 
-                    await JsonUtilites.SerializeAndSaveJsonFilesAsync(mSuccessBuildExecPaths, mPublishPath, ServiceFileNames.ServiceExecPaths);
+                    await JsonUtilites.SerializeAndSaveJsonFilesAsync(mSuccessBuildExecPaths, mPublishPath, ServiceFileNames.ServiceExecPathsFileName);
                 
                 mLogger.LogInformation("Publish {projectName} finished with code {exitCode}", sourcePath, exitCode);
             }

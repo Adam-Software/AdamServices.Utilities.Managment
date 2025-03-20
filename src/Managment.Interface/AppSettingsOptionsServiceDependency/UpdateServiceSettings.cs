@@ -6,6 +6,6 @@ namespace Managment.Interface.AppSettingsOptionsServiceDependency
     public class UpdateServiceSettings
     {
         public string RepositoriesDownloadPath { get; set; } = "repositories";
-        public List<ServiceRepositoryModel> ServicesRepositories { get; set; }
+        public List<ServiceModelBase> ServicesRepositories { get; set; }
     }
 }

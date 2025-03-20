@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Managment.Interface.Common
@@ -19,6 +20,11 @@ namespace Managment.Interface.Common
         #endregion
 
         #region ~
+
+        static JsonUtilites()
+        {
+            mJsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        }
 
         #endregion
 
@@ -46,6 +52,32 @@ namespace Managment.Interface.Common
 
             string jsonString = JsonSerializer.Serialize<T>(content, mJsonSerializerOptions);
             await File.WriteAllTextAsync(filePath, jsonString);
+        }
+
+        public static T SerializeJson<T>(string content) where T : class, new()    
+        {
+            try
+            {
+                T jsonObject = JsonSerializer.Deserialize<T>(content, mJsonSerializerOptions);
+                return jsonObject;
+            }
+            catch 
+            {
+                return new T();
+            }
+        }
+
+        public static T SerializeJson<T>(byte[] content) where T : class, new()
+        {
+            try
+            {
+                T jsonObject = JsonSerializer.Deserialize<T>(content, mJsonSerializerOptions);
+                return jsonObject;
+            }
+            catch
+            {
+                return new T();
+            }
         }
 
         public static async Task<T> ReadJsonFileAsync<T>(string path, string fileName) where T : class

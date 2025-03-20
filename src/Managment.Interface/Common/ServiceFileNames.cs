@@ -2,10 +2,11 @@
 {
     public class ServiceFileNames
     {
-        public const string BuildTargetPathList = "build-target-path-list.json";
-        public const string DownloadInfoFilesNamePath = "download-info-files-name-list.json";
-        public const string DownloadRepositoriesFilesNamePath  = "download-repositories-files-name-list.json";
+        public const string BuildTargetPathsFileName = "build-target-path-list.json";
+        public const string DownloadInfoFileName = "download-info-files-name-list.json";
+        public const string DownloadRepositoriesFileName  = "download-repositories-files-name-list.json";
 
-        public const string ServiceExecPaths = "service_exec_paths.json";
+        public const string ServiceExecPathsFileName = "service_exec_paths.json";
+        public const string UpdateRequiredServicesFileName = "update-required-service.json";
     }
 }

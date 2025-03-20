@@ -33,7 +33,7 @@ namespace Managment.Services.Common
         #region Var
 
         private readonly GitHubClient mGitHubClient;
-        private readonly List<ServiceRepositoryModel> mServiceRepositories = [];
+        private readonly List<ServiceModelBase> mServiceRepositories = [];
         private readonly string mSourceDownloadPath = "download";
         private readonly string mSourceBuildPath = "build";
 
@@ -75,9 +75,17 @@ namespace Managment.Services.Common
             await ReadServiceRepositoryFile();
             await DownloadZipFromRepositoryAsync();
             await ExtractSourceFiles();
-            await CopySourceFilesToBuildFolder();
+            await CopySourceFilesToBuildDirrectory();
 
             OnRaiseDownloadSourceFinishedEvent();
+        }
+
+        public async Task DownloadUpdate()
+        {
+            await ReadServiceUpdateFile();
+            await DownloadZipFromRepositoryAsync();
+            await ExtractSourceFiles();
+            await CopySourceFilesToBuildDirrectory();
         }
 
         public void Dispose()
@@ -102,6 +110,36 @@ namespace Managment.Services.Common
 
         #region Private methods
 
+        private async Task ReadServiceUpdateFile()
+        {
+            mLogger.LogInformation("=== Step 1. Read Service Update File Start ===");
+
+            int i = 0;
+
+            try
+            {
+                List<string> repositories = await JsonUtilites.ReadJsonFileAsync<List<string>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, ServiceFileNames.UpdateRequiredServicesFileName);
+
+                foreach (string repository in repositories)
+                {
+                    ServiceModelBase serviceRepository = await JsonUtilites.ReadJsonFileAsync<ServiceModelBase>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, repository);
+
+                    //foreach (var serviceRepository in serviceRepositories)
+                    //{
+                        i++;
+                        mServiceRepositories.Add(serviceRepository);
+                        mLogger.LogInformation("{counter}. {RepositoriesName} added to the list of repositories for download", i, serviceRepository.RepositoriesName);
+                    //}
+                }
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+
+            mLogger.LogInformation("=== Step 1. Read Service Update File Finish ===");
+        }
+
         private async Task ReadServiceRepositoryFile()
         {
             mLogger.LogInformation("=== Step 1. Read Service Repository Start ===");
@@ -110,17 +148,17 @@ namespace Managment.Services.Common
 
             try
             {
-                List<string> repositories = await JsonUtilites.ReadJsonFileAsync<List<string>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, ServiceFileNames.DownloadRepositoriesFilesNamePath);
+                List<string> repositories = await JsonUtilites.ReadJsonFileAsync<List<string>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, ServiceFileNames.DownloadRepositoriesFileName);
                 
                 foreach (string repository in repositories)
                 {
-                    List<ServiceRepositoryModel> serviceRepositories = await JsonUtilites.ReadJsonFileAsync<List<ServiceRepositoryModel>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, repository);
+                    List<ServiceModelBase> serviceRepositories = await JsonUtilites.ReadJsonFileAsync<List<ServiceModelBase>>(mAppSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath, repository);
 
                     foreach (var serviceRepository in serviceRepositories)
                     {
                         i++;
                         mServiceRepositories.Add(serviceRepository);
-                        mLogger.LogInformation("{cointer}. {RepositoriesName} added to the list of repositories for download", i, serviceRepository.RepositoriesName);
+                        mLogger.LogInformation("{counter}. {RepositoriesName} added to the list of repositories for download", i, serviceRepository.RepositoriesName);
                     }
                 }
             }
@@ -142,7 +180,7 @@ namespace Managment.Services.Common
 
             try
             {
-                foreach (ServiceRepositoryModel serviceRepository in mServiceRepositories)
+                foreach (ServiceModelBase serviceRepository in mServiceRepositories)
                 {
                     i++;
 
@@ -203,9 +241,9 @@ namespace Managment.Services.Common
             mLogger.LogInformation("=== Step 3. Extract Source Files Finihed ===");
         }
 
-        private async Task CopySourceFilesToBuildFolder()
+        private async Task CopySourceFilesToBuildDirrectory()
         {
-            mLogger.LogInformation("=== Step 4. Copy Source Files To Build Folder Started ===");
+            mLogger.LogInformation("=== Step 4. Copy Source Files To Build Dirrectory Started ===");
             List<string> buildTargetPaths = [];
             int i = 0;
 
@@ -222,6 +260,7 @@ namespace Managment.Services.Common
                     string destonation = Path.Combine(mSourceBuildPath, dirrectoryName);
 
                     DirectoryUtilites.CopyDirectory(source, destonation, true);
+
                     buildTargetPaths.Add(dirrectoryName);
                     mLogger.LogInformation("{counter}. Copy {source} to {destonation}", i, source, destonation);
                 }
@@ -231,8 +270,8 @@ namespace Managment.Services.Common
                 mLogger.LogError("{error}", ex.Message);
             }
             
-            await JsonUtilites.SerializeAndSaveJsonFilesAsync(buildTargetPaths, mSourceBuildPath, ServiceFileNames.BuildTargetPathList);
-            mLogger.LogInformation("=== Step 4. Copy Source Files To Build Folder Finish ===");
+            await JsonUtilites.SerializeAndSaveJsonFilesAsync(buildTargetPaths, mSourceBuildPath, ServiceFileNames.BuildTargetPathsFileName);
+            mLogger.LogInformation("=== Step 4. Copy Source Files To Build Dirrectory Finish ===");
         }
 
         #endregion

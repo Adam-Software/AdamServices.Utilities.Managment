@@ -153,18 +153,23 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in installation mode");
 
-                mUpdateService.CheckUpdates().Wait(CancellationToken.None);
-                mDownloadService.DownloadSource().Wait(CancellationToken.None);
+                mUpdateService.DownloadUpdateInfoFiles().Wait(CancellationToken.None);
+                //mDownloadService.DownloadSource().Wait(CancellationToken.None);
 
-                mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
-                mDotnetService.RunAsync(mCancellationSource.Token);
+                //mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
+                //mDotnetService.RunAsync(mCancellationSource.Token);
 
                 return Task.CompletedTask;
             }
 
             if (mAppArguments.Run)
             {
+                mUpdateService.CheckUpdatesForInstalledProject().Wait(CancellationToken.None);
+                mDownloadService.DownloadUpdate().Wait(CancellationToken.None);
+
+                mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
                 mDotnetService.RunAsync(mCancellationSource.Token);
+
                 return Task.CompletedTask;
             }
 
