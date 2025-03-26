@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,22 +18,23 @@ namespace Managment.Services.Common
         #region Services
 
         private readonly ILogger<DotnetService> mLogger;
+        private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
 
         #endregion
 
         #region Const
 
-        
+
 
         #endregion
 
         #region Var
 
-        private readonly string mSourceBuildPath = "build";
-        private readonly string mPublishPath = "publish";
         private readonly string mDotnetVerbosityLevel = "q";
         private readonly List<string> mBuildLogs = [];
-        private readonly List<string> mSuccessBuildExecPaths = [];
+        private readonly string mBuildDirrectory;
+        private readonly string mPublishDirrectory;
+
         #endregion
 
         #region ~
@@ -41,11 +43,14 @@ namespace Managment.Services.Common
         {
             mLogger = serviceProvider.GetRequiredService<ILogger<DotnetService>>();
 
-            IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
+            mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
+            mDotnetVerbosityLevel = mAppSettingsOptionsService.DotnetServiceSettings.DotnetVerbosityLevel;
 
-            mSourceBuildPath = appSettingsOptionsService.DownloadServiceSettings.SourceBuildPath;
-            mPublishPath = appSettingsOptionsService.DotnetServiceSettings.PublishPath;
-            mDotnetVerbosityLevel = appSettingsOptionsService.DotnetServiceSettings.DotnetVerbosityLevel;
+            var buildDirrectory = Path.Combine(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.BuildDirrectory);
+            mBuildDirrectory = new DirectoryInfo(buildDirrectory).FullName;
+
+            var publishDirrectory = Path.Combine(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.PublishDirrectory);
+            mPublishDirrectory = new DirectoryInfo(publishDirrectory).FullName;
 
             mLogger.LogInformation("=== DotnetService. Start ===");
         }
@@ -58,11 +63,11 @@ namespace Managment.Services.Common
         {
             try
             {
-                List<string> sourcePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mSourceBuildPath, ServiceFileNames.BuildTargetPathsFileName);
-
-                foreach (string sourcePath in sourcePaths)
+                ServiceRepositories temp = await JsonUtilites.ReadJsonFileAsync<ServiceRepositories>(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+                
+                foreach (RepositoriesBaseInfo serviceRepository in temp.ServiceFilesContent)
                 {
-                    await StartDotnetPublishAsync(sourcePath, cancellationToken);
+                    await StartDotnetPublishAsync(serviceRepository.RepositoriesName, cancellationToken);
                 }
             }
             catch (Exception ex) 
@@ -71,14 +76,18 @@ namespace Managment.Services.Common
             }
         }
 
-        public Task RunAsync(CancellationToken cancellationToken)
+        public async Task RunAsync(CancellationToken cancellationToken)
         {
             try
             {
-                List<string> execPaths = JsonUtilites.ReadJsonFileAsync<List<string>>(mPublishPath, ServiceFileNames.ServiceExecPathsFileName).Result;
-
-                foreach (string execPath in execPaths)
+                ServiceRepositories temp = await JsonUtilites.ReadJsonFileAsync<ServiceRepositories>(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+                
+                foreach (RepositoriesBaseInfo serviceRepository in temp.ServiceFilesContent)
                 {
+                    //string publishPath = new DirectoryInfo(mPublishDirrectory).FullName;
+                    string projectName = temp.ServiceFilesContent.Where(x => x.RepositoriesName == serviceRepository.RepositoriesName).Select(x => x.ServiceInfoFileContent).FirstOrDefault().Services.Name;
+                    string execPath = Path.Combine(mPublishDirrectory, serviceRepository.RepositoriesName, $"{projectName}.dll");
+                    
                     _ = StartDotnetExecAsync(exeсPath: execPath, cancellationToken: cancellationToken);
                 }
             }
@@ -86,8 +95,6 @@ namespace Managment.Services.Common
             {
                 mLogger.LogError("{error}", ex.Message);
             }
-
-            return Task.CompletedTask;
         }
 
         public void Dispose()
@@ -103,13 +110,14 @@ namespace Managment.Services.Common
         {
             string args = string.Format($"exec {exeсPath}");
             string workingDirectory = Path.GetDirectoryName(exeсPath);
-
             string projectName = Path.GetFileNameWithoutExtension(exeсPath);
-            mLogger.LogInformation("Run {projectName}", projectName);
 
+            mLogger.LogInformation("Run {projectName}", projectName);
             try
             {
+                
                 await StartProcess(arguments: args, workingDirectory: workingDirectory, cancellationToken: cancellationToken);
+                
             }
             catch (TaskCanceledException)
             {
@@ -122,32 +130,32 @@ namespace Managment.Services.Common
         }
 
 
-        private async Task StartDotnetPublishAsync(string sourcePath, CancellationToken cancellationToken)
+        private async Task StartDotnetPublishAsync(string projectRepositoryName, CancellationToken cancellationToken)
         {
-            var sourcePathTemp = Path.Combine(mSourceBuildPath, sourcePath);
+            var sourcePathTemp = Path.Combine(mBuildDirrectory, projectRepositoryName);
             var sourceFullPath = new DirectoryInfo(sourcePathTemp).FullName;
 
-            string publishPathTemp = Path.Combine(mPublishPath, sourcePath);
+            string publishPathTemp = Path.Combine(mPublishDirrectory, projectRepositoryName);
             var publishFullPath = new DirectoryInfo(publishPathTemp).FullName;
 
             var dotnetVerbosityLevel = mDotnetVerbosityLevel;
             if (dotnetVerbosityLevel.ToLower().Equals("o"))
                 dotnetVerbosityLevel = "q";
 
-            string args = string.Format($"publish -v {dotnetVerbosityLevel} --source {sourceFullPath} --output {publishFullPath}");
+            string args = string.Format($"publish -v {dotnetVerbosityLevel} --source {projectRepositoryName} --output {publishFullPath}");
 
-            mLogger.LogInformation("Build and publish {projectName} to {publishFullPath} started", sourcePath, publishFullPath);
+            mLogger.LogInformation("Build and publish {projectName} to {publishFullPath} started", projectRepositoryName, publishFullPath);
 
             try
             {
                 mBuildLogs.Clear();
                 DirectoryUtilites.CreateOrClearDirectory(publishFullPath);
                 
-                int exitCode = await StartProcess(workingDirectory: sourceFullPath, arguments: args, cancellationToken: cancellationToken);
+                int exitCode = await StartProcess(workingDirectory: sourcePathTemp, arguments: args, cancellationToken: cancellationToken);
 
                 if(exitCode != 0 && mDotnetVerbosityLevel.ToLower().Equals("o"))
                 {
-                    mLogger.LogError("Build {projectName} finished with eror code {exitCode}. The project build log will be shown below.", sourcePath, exitCode);
+                    mLogger.LogError("Build {projectName} finished with eror code {exitCode}. The project build log will be shown below.", sourcePathTemp, exitCode);
 
                     mBuildLogs.ForEach(message =>
                     {
@@ -157,22 +165,10 @@ namespace Managment.Services.Common
 
                 if (exitCode == 0) 
                 {
-                    File.Copy(Path.Combine(sourceFullPath, "service_info.json"), Path.Combine(publishFullPath, "service_info.json"), true);
-
-                    var projectName = JsonUtilites.ReadJsonFileAsync<ServiceInfoModel>(sourceFullPath, "service_info.json").Result.Services.Name;
-
-                    if (!string.IsNullOrEmpty(projectName)) 
-                    {
-                        string execProjectName = $"{projectName}.dll";
-                        string serviceExecPath = Path.Combine(publishFullPath, execProjectName);
-                        mSuccessBuildExecPaths.Add(serviceExecPath);
-                    }   
+                    File.Copy(Path.Combine(sourcePathTemp, "service_info.json"), Path.Combine(publishFullPath, "service_info.json"), true);
                 }
 
-                if(mSuccessBuildExecPaths.Count > 0) 
-                    await JsonUtilites.SerializeAndSaveJsonFilesAsync(mSuccessBuildExecPaths, mPublishPath, ServiceFileNames.ServiceExecPathsFileName);
-                
-                mLogger.LogInformation("Publish {projectName} finished with code {exitCode}", sourcePath, exitCode);
+                mLogger.LogInformation("Publish {projectName} finished with code {exitCode}", projectRepositoryName, exitCode);
             }
             catch (Exception ex) 
             {
@@ -209,12 +205,8 @@ namespace Managment.Services.Common
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            cancellationToken.Register(() => 
-            {
-                process.Kill();
-            });
+            cancellationToken.Register(process.Kill);
 
-            
             await process.WaitForExitAsync(cancellationToken);
 
             return process.ExitCode;

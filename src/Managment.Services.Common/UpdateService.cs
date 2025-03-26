@@ -25,20 +25,15 @@ namespace Managment.Services.Common
         #region Services
 
         private readonly ILogger<UpdateService> mLogger;
+        private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
 
         #endregion
 
         #region Var
 
         private readonly GitHubClient mGitHubClient;
+        private readonly string mPublishDirrectory;
         
-        private readonly List<ServiceModelBase> mSettingsServiceRepositories;
-        private readonly List<ServiceModelBase> mServiceRepositories;
-        private readonly string mDownloadPath = "download";
-        private readonly string mPublishPath = "publish";
-
-        private ServiceRepositories mTempModel;
-
         #endregion
 
         #region ~
@@ -47,17 +42,12 @@ namespace Managment.Services.Common
         {
             mLogger = serviceProvider.GetRequiredService<ILogger<UpdateService>>();
 
-            IAppSettingsOptionsService appSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
-            IGitHubCilentService gitHubClientService = serviceProvider.GetRequiredService<IGitHubCilentService>();
+            mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
+            mGitHubClient = serviceProvider.GetRequiredService<IGitHubCilentService>().GitHubClient;
 
-            mGitHubClient = gitHubClientService.GitHubClient;
-
-            mSettingsServiceRepositories = new List<ServiceModelBase>(appSettingsOptionsService.UpdateServiceSettings.ServicesRepositories);
-            mServiceRepositories = [];
-
-            mDownloadPath = appSettingsOptionsService.UpdateServiceSettings.RepositoriesDownloadPath;
-            mPublishPath = appSettingsOptionsService.DotnetServiceSettings.PublishPath;
-
+            string publishDirrectory = Path.Combine(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.PublishDirrectory);
+            mPublishDirrectory = new DirectoryInfo(publishDirrectory).FullName;
+            
             mLogger.LogInformation("=== UpdateService. Start ===");
         }
 
@@ -69,10 +59,9 @@ namespace Managment.Services.Common
         {
             OnRaiseCheckUpdateStartedEvent();
 
-            DirectoryUtilites.CreateOrClearDirectory(mDownloadPath);
+            Directory.CreateDirectory(mAppSettingsOptionsService.WorkingDirrectory);
 
             await DownloadRepositoriesListAsync();
-            //await CheckAndSaveRepositoriesListAsync();
             await DownloadRepositoriesInfoAsync();
 
             OnRaiseCheckUpdateFinishedEvent();
@@ -81,16 +70,12 @@ namespace Managment.Services.Common
         public async Task CheckUpdatesForInstalledProject()
         {
             //await DownloadUpdateInfoFiles();
-            //await EqualInstalledAndDownloadVersion();
-
+            await EqualInstalledAndRemoteVersionAsync();
         }
 
         public void Dispose()
         {
             mLogger.LogInformation("=== UpdateService. Dispose ===");
-            //DirectoryUtilites.CreateOrClearDirectory(mDownloadPath);
-            mServiceRepositories.Clear();
-            mSettingsServiceRepositories.Clear();
         }
 
         #endregion
@@ -99,244 +84,146 @@ namespace Managment.Services.Common
 
         private async Task DownloadRepositoriesListAsync()
         {
-            mLogger.LogInformation("=== Step 1. Download Repositories List ===");
+            mLogger.LogInformation("=== Download Repositories List Start ===");
             
-            int i = 0;
-            List<ServiceModelBase> tempServiceRepositories = new(mSettingsServiceRepositories);
-            mTempModel = new();
+            List<RepositoriesBaseInfo> tempServiceRepositories = new(mAppSettingsOptionsService.UpdateServiceSettings.ServicesRepositories);
+            ServiceRepositories serviceRepositories = new();
 
-            foreach (ServiceModelBase serviceRepository in tempServiceRepositories)
-            {
-                i++;
-                bool savedWithException = false;
-                mLogger.LogInformation("{counter}. Download repositories list from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", i, serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServicesListFilePath);
+            foreach (RepositoriesBaseInfo serviceRepository in tempServiceRepositories)
+            { 
+                mLogger.LogInformation("Download repositories list from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", 
+                     serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServiceFilePath);
      
                 try
                 {
-                    byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServicesListFilePath);
+                    byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServiceFilePath);
                     List<ServiceFileContent> json = JsonUtilites.SerializeJson<List<ServiceFileContent>>(fileContent);
-                    
-                    var tempData = new ServiceRepositoryContent
-                    {
-                        RepositoriesName = serviceRepository.RepositoriesName,
-                        RepositoriesOwner = serviceRepository.RepositoriesOwner,
-                        ServicesListFilePath = serviceRepository.ServicesListFilePath,
-                        ServiceFilesContent = json
-                    };
 
-                    mTempModel.ServiceRepositoriesContent.Add(tempData);
-
+                    serviceRepositories.RepositoriesName = serviceRepository.RepositoriesName;
+                    serviceRepositories.RepositoriesOwner = serviceRepository.RepositoriesOwner;
+                    serviceRepositories.ServiceFilePath = serviceRepository.ServiceFilePath;
+                    serviceRepositories.ServiceFilesContent = json;
                 }
                 catch (NotFoundException) 
                 {
-                    
-                    mLogger.LogError("{counter}. The file or repository not found and removed from repositories list", i);
-                    mSettingsServiceRepositories.Remove(serviceRepository);
-
-                    savedWithException = true;
+                    mLogger.LogError("Not found repository RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}",
+                        serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServiceFilePath);
                 }
                 catch (Exception ex)
                 {
-                    mLogger.LogError("{counter}. {exception}", i, ex);
-                    mSettingsServiceRepositories.Remove(serviceRepository);
-
-                    savedWithException = true;
-                }
-                finally
-                {
-                    //if (!savedWithException)
-                    //    mLogger.LogInformation("{counter}. {filePath} saved!", i, $"{mDownloadPath}{Path.DirectorySeparatorChar}{fileName}");
+                    mLogger.LogError("{error}", ex);
                 }
             }
 
-            await JsonUtilites.SerializeAndSaveJsonFilesAsync(mTempModel, mDownloadPath, "temp.json");
+            await JsonUtilites.SerializeAndSaveJsonFilesAsync(serviceRepositories, mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
 
-            mLogger.LogInformation("=== Step 1. Download Repositories Finished ===");
-        }
-
-        private async Task CheckAndSaveRepositoriesListAsync()
-        {
-            mLogger.LogInformation("=== Step 2. Check Repositories Info Files ===");
-
-            List<string> repositoryInfoFilesName = [];
-
-            foreach (ServiceModelBase serviceRepository in mSettingsServiceRepositories)
-            {
-                string fileName = $"{serviceRepository.RepositoriesOwner.ToLower()}.{serviceRepository.RepositoriesName.ToLower()}.repositories.json";
-                
-                List<ServiceModelBase> repositories = [];
-                bool readWithException = false;
-
-                try
-                {
-                    repositories = await JsonUtilites.ReadJsonFileAsync<List<ServiceModelBase>>(mDownloadPath, fileName);
-                }
-                catch (FileNotFoundException)
-                {
-                    mLogger.LogError("The file {filename} was not found", fileName);
-                    readWithException = true;
-                }
-                catch (Exception ex)
-                {
-                    mLogger.LogError("{exception}", ex);
-                    readWithException = true;
-                }
-                finally
-                {
-                    if (!readWithException)
-                    {
-                        foreach (ServiceModelBase repository in repositories)
-                        {
-                            mLogger.LogInformation("RepositoriesName: {RepositoriesName} RepositoriesOwner: {RepositoriesOwner} read and added to download list", repository.RepositoriesName, repository.RepositoriesOwner);
-                            mServiceRepositories.Add(repository);    
-                        }
-
-                        repositoryInfoFilesName.Add(fileName);
-                    }
-                }
-            }
-
-            if (repositoryInfoFilesName.Count > 0) 
-            {
-                await JsonUtilites.SerializeAndSaveJsonFilesAsync(repositoryInfoFilesName, mDownloadPath, ServiceFileNames.DownloadRepositoriesFileName);
-                mLogger.LogInformation("Create repeository file name {FilesNamePath}", ServiceFileNames.DownloadRepositoriesFileName);
-            }
-
-            mLogger.LogInformation("=== Step 2. Check Repositories Info Files Finished ===");
+            mLogger.LogInformation("=== Download Repositories Finished ===");
         }
 
         private async Task DownloadRepositoriesInfoAsync()
         {
-            mLogger.LogInformation("=== Step 3. Download Service Info Files ===");
+            mLogger.LogInformation("=== Download Service Info Files ===");
+            
+            ServiceRepositories tempModel = await JsonUtilites.ReadJsonFileAsync<ServiceRepositories>(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
 
-            //List<string> serviceInfoFilesName = [];
-            int i = 0;
-
-            ServiceRepositories tempModel = await JsonUtilites.ReadJsonFileAsync<ServiceRepositories>(mDownloadPath, "temp.json");
-
-            bool savedWithException = false;
-
-            foreach (ServiceRepositoryContent settingsServicesRepositories in tempModel.ServiceRepositoriesContent)
+            foreach (ServiceFileContent servicesListFileContent in tempModel.ServiceFilesContent)
             {
-                foreach (ServiceFileContent servicesListFileContent in settingsServicesRepositories.ServiceFilesContent)
+                try
                 {
-                    i++;
+                    string serviceFilePath = CommonFilesAndDirectoriesNames.DefaultServiceInfoName;
 
-                    try
-                    {
-                        string filePath = "service_info.json";
+                    if (!string.IsNullOrEmpty(servicesListFileContent.ServiceFilePath))
+                        serviceFilePath = servicesListFileContent.ServiceFilePath;
 
-                        if (!string.IsNullOrEmpty(servicesListFileContent.ServicesListFilePath))
-                            filePath = servicesListFileContent.ServicesListFilePath;
+                    byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(servicesListFileContent.RepositoriesOwner, servicesListFileContent.RepositoriesName, serviceFilePath);
 
-                        byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(servicesListFileContent.RepositoriesOwner, servicesListFileContent.RepositoriesName, filePath);
-                        ServiceInfoModel json = JsonUtilites.SerializeJson<ServiceInfoModel>(fileContent);
+                    ServiceInfoModel json = JsonUtilites.SerializeJson<ServiceInfoModel>(fileContent);
+                    servicesListFileContent.ServiceInfoFileContent = json;
 
-                        servicesListFileContent.ServiceInfoFileContent = json;
-
-                        //mLogger.LogInformation("{counter}. Start download service info file from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", i, settingsRepository.RepositoriesName, settingsRepository.RepositoriesOwner, filePath);
-
-
-                        //string serviceRepositoriesList = System.Text.Encoding.Default.GetString(fileContent);
-                        //await JsonUtilites.SaveRawJsonFilesAsync(serviceRepositoriesList, mDownloadPath, fileName);
-                    }
-                    catch (Exception ex)
-                    {
-                        savedWithException = true;
-                        mLogger.LogError("{exception}", ex);
-                    }
-                    finally
-                    {
-                        if (!savedWithException)
-                        {
-                            mLogger.LogInformation("{сounter}. Download and save service info file", i);
-                            //serviceInfoFilesName.Add(fileName);
-                        }
-                    }
+                    mLogger.LogInformation("Start download service info file from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", 
+                        servicesListFileContent.RepositoriesName, servicesListFileContent.RepositoriesOwner, serviceFilePath);
+                }
+                catch (Exception ex)
+                {
+                    mLogger.LogError("{exception}", ex);
                 }
             }
+            
+            await JsonUtilites.SerializeAndSaveJsonFilesAsync(tempModel, mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
 
-            await JsonUtilites.SerializeAndSaveJsonFilesAsync(tempModel, mDownloadPath, "temp.json");
-            mLogger.LogInformation("Create service info file name {FilesNamePath}", ServiceFileNames.DownloadInfoFileName);
-
-            //if (serviceInfoFilesName.Count > 0)
-            //{
-
-            //}
-
-            mLogger.LogInformation("=== Step 3. Download Service Info Files Finished ===");
+            mLogger.LogInformation("=== Download Service Info Files Finished ===");
         }
 
-        private async Task EqualInstalledAndDownloadVersion()
+        private async Task EqualInstalledAndRemoteVersionAsync()
         {
-            List<ServiceInfoModel> installedInfoList = [];
-            Dictionary<string, ServiceInfoModel> downloadInfoList = [];
-            List<string> updateRequiredService = [];
+            mLogger.LogInformation("=== Equal Installed And Remote Version Start ===");
 
             try
             {
-                List<string> projectExecPaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mPublishPath, ServiceFileNames.ServiceExecPathsFileName);
-
-                foreach (string projectExecPath in projectExecPaths)
-                {
-                    string projectDirrectory = Path.GetDirectoryName(projectExecPath);
-                    ServiceInfoModel installedInfo = await JsonUtilites.ReadJsonFileAsync<ServiceInfoModel>(projectDirrectory, "service_info.json");
-
-                    mLogger.LogInformation("Publish project {projectName} is version {projectVersion}", installedInfo.Services.Name, installedInfo.Services.Version);
-                    installedInfoList.Add(installedInfo);
-                }
-
-                List<string> downloadInfoFilePaths = await JsonUtilites.ReadJsonFileAsync<List<string>>(mDownloadPath, ServiceFileNames.DownloadInfoFileName);
-
-                foreach (string downloadInfoFilePath in downloadInfoFilePaths)
-                {
-                    var downloadInfo = await JsonUtilites.ReadJsonFileAsync<ServiceInfoModel>(mDownloadPath, downloadInfoFilePath);
-
-                    mLogger.LogInformation("Download project {projectName} is version {projectVersion}", downloadInfo.Services.Name, downloadInfo.Services.Version);
-                    downloadInfoList.Add(downloadInfoFilePath, downloadInfo);
-                }
-
-                foreach (KeyValuePair<string, ServiceInfoModel> downloadInfo in downloadInfoList)
-                {
-                    string installedVersion = installedInfoList.Where(x => x.Services.Name.Equals(downloadInfo.Value.Services.Name)).Select(x => x.Services.Version).FirstOrDefault();
-
-                    if (!string.IsNullOrEmpty(installedVersion))
-                    {
-                        mLogger.LogInformation("For {projectName} installed version is {installedVersion} remoteVersion is {downloadVersion}", downloadInfo.Value.Services.Name, installedVersion, downloadInfo.Value.Services.Version);
-                        int compareResult = StringUtilites.CompareVersions(installedVersion, downloadInfo.Value.Services.Version);
-
-                        if (compareResult == -1)
-                        {
-                            mLogger.LogInformation("The installed version is smaller than the downloaded version. Need update!");
-                            updateRequiredService.Add(downloadInfo.Key);
-                        }
-
-                        if (compareResult == 0)
-                        {
-                            mLogger.LogInformation("The installed version is equals than the downloaded version. No updates required!");
-                        }
-
-                        if (compareResult == 1)
-                        {
-                            mLogger.LogInformation("The installed version is higher than the downloaded version. No updates required");
-                        }
-                    }
-                    else
-                    {
-                        mLogger.LogInformation("No information file found for the project {projectName}. Need install project!", downloadInfo.Value.Services.Name);
-                        updateRequiredService.Add(downloadInfo.Key);
-                    }
-                }
-
-                if(updateRequiredService.Count > 0) 
-                    await JsonUtilites.SerializeAndSaveJsonFilesAsync(updateRequiredService, mDownloadPath, ServiceFileNames.UpdateRequiredServicesFileName);
+                ServiceRepositories serviceRepositories = await JsonUtilites.ReadJsonFileAsync<ServiceRepositories>(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+                await CompareVersionAsync(serviceRepositories);
             }
-            catch (Exception ex) 
-            { 
-                mLogger.LogInformation("{error}", ex.Message);
+            catch (FileNotFoundException ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+                mLogger.LogError("Try download or update remote info files");
             }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex);
+            }
+
+            mLogger.LogInformation("=== Equal Installed And Remote Version Finish ===");
         }
 
+        private async Task CompareVersionAsync(ServiceRepositories serviceRepositories)
+        {
+            foreach (ServiceFileContent remoteServiceRepositories in serviceRepositories.ServiceFilesContent)
+            {
+                try
+                {
+                    string publishDirrectory = Path.Combine(mPublishDirrectory, remoteServiceRepositories.RepositoriesName);
+                    ServiceInfoModel installedFileInfo = await JsonUtilites.ReadJsonFileAsync<ServiceInfoModel>(publishDirrectory, "service_info.json");
+                    ServiceInfoModel remoteFileInfo = remoteServiceRepositories.ServiceInfoFileContent;
+
+                    mLogger.LogInformation("Installed {projectName} project version {projectVersion}", installedFileInfo.Services.Name, installedFileInfo.Services.Version);
+                    mLogger.LogInformation("Remote {projectName} project version {projectVersion}", remoteFileInfo.Services.Name, remoteFileInfo.Services.Version);
+
+                    int compareResult = StringUtilites.CompareVersions(installedFileInfo.Services.Version, remoteFileInfo.Services.Version);
+
+                    if (compareResult == -1)
+                    {
+                        mLogger.LogInformation("The installed version is smaller than the remote version. Need update!");
+                        remoteServiceRepositories.NeedUpdate = true;
+                    }
+
+                    if (compareResult == 0)
+                    {
+                        mLogger.LogInformation("The installed version is equals than the remote version. No updates required!");
+                    }
+
+                    if (compareResult == 1)
+                    {
+                        mLogger.LogInformation("The installed version is higher than the remote version. Need downgrade!");
+                        remoteServiceRepositories.NeedUpdate = true;
+                    }
+                }
+                catch(FileNotFoundException ex)
+                {
+                    mLogger.LogError("No information file found for the project {projectName}. Need install project!", remoteServiceRepositories.ServiceInfoFileContent.Services.Name);
+                    mLogger.LogError(ex.Message);
+
+                    remoteServiceRepositories.NeedInstall = true;
+                }
+                catch (Exception ex)
+                {
+                    mLogger.LogInformation("{error}", ex.Message);
+                }
+
+                await JsonUtilites.SerializeAndSaveJsonFilesAsync(serviceRepositories, mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+
+            }
+        }
 
         #endregion
 

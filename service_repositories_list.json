@@ -1,14 +1,19 @@
 [
 	{
-		/* user or organization */
+		/* User or organization */
 		"repositoriesOwner": "vertigra",
-		/* repositories names */
-		"repositoriesName": "Services.FindRobot"
+
+		/* Repository name */
+		"repositoriesName": "Services.FindRobot",
+
+		/* Service info file path.
+		 * Optional. Default name service_info.json
+		 */
+		"serviceFilePath": ""
 	},
 	{
-		/* user or organization */
 		"repositoriesOwner": "Adam-Software",
-		/* repositories names */
-		"repositoriesName": "Services.Managment"
+		"repositoriesName": "Services.Managment",
+		"serviceFilePath": ""
 	}
 ]

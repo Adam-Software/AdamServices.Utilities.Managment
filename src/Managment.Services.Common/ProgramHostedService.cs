@@ -146,6 +146,8 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in update mode");
 
+                mUpdateService.CheckUpdatesForInstalledProject().Wait(CancellationToken.None);
+
                 return Task.CompletedTask;
             }
 
@@ -154,22 +156,18 @@ namespace Managment.Services.Common
                 mLogger.LogInformation("The application is running in installation mode");
 
                 mUpdateService.DownloadUpdateInfoFiles().Wait(CancellationToken.None);
-                //mDownloadService.DownloadSource().Wait(CancellationToken.None);
-
-                //mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
-                //mDotnetService.RunAsync(mCancellationSource.Token);
-
+                mDownloadService.DownloadSource().Wait(CancellationToken.None);
+                mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
+                
                 return Task.CompletedTask;
             }
 
             if (mAppArguments.Run)
             {
-                mUpdateService.CheckUpdatesForInstalledProject().Wait(CancellationToken.None);
-                mDownloadService.DownloadUpdate().Wait(CancellationToken.None);
-
-                mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
+                mLogger.LogInformation("The application is running in run mode");
+                
                 mDotnetService.RunAsync(mCancellationSource.Token);
-
+                
                 return Task.CompletedTask;
             }
 
