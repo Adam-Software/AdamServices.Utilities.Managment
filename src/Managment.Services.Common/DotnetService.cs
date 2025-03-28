@@ -116,6 +116,9 @@ namespace Managment.Services.Common
 
             mLogger.LogInformation("Run {projectName}", projectName);
 
+            if (!string.IsNullOrEmpty(arguments)) 
+                mLogger.LogInformation("Run with arguments {arguments}",  arguments);
+
             try
             {
                 await StartProcess(arguments: args, workingDirectory: workingDirectory, cancellationToken: cancellationToken);

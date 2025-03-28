@@ -5,8 +5,7 @@ namespace Managment.Interface.Common.JsonModels
     public class ServiceInfoModel
     {
         public ServiceSection Services { get; set; } = new();
-
-        public ExecutionOptionsSection ExecutionOptions = new();
+        public ExecutionOptionsSection ExecutionOptions { get; set; } = new();
         public CompilerOptions CompilerOptions { get; set; } = new();
         public Systemd Systemd { get; set; } = new();
     }

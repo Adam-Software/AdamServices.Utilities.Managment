@@ -9,12 +9,12 @@
     "dependencies": []
   },
   "executionOptions": {
-      "arguments": "-u"
+      "arguments": ""
   },
   "compilerOptions": {
-    "serviceProjectPath": "/src/Services.Managment/**.csproj",
+    "serviceProjectPath": "",
     "serviceOutputPath": "",
-    "serviceBuildPath": "/usr/src/Services.Managment"
+    "serviceBuildPath": ""
   },
   "systemd": {
     /* if the parameter is empty, the service will not be installed. */
