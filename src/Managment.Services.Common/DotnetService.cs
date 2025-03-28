@@ -86,10 +86,11 @@ namespace Managment.Services.Common
                 {
                     string projectDirrectory = serviceInfo.Key;
                     string projectName = serviceInfo.Value.Services.Name;
+                    string execArguments = serviceInfo.Value.ExecutionOptions.Arguments;
 
-                    string projectExecPath = Path.Combine(mPublishDirrectory, projectDirrectory, $"{projectName}.dll");
+                    string execPath = Path.Combine(mPublishDirrectory, projectDirrectory, $"{projectName}.dll");
                     
-                    _ = StartDotnetExecAsync(exeсPath: projectExecPath, cancellationToken: cancellationToken);
+                    _ = StartDotnetExecAsync(exeсPath: execPath, arguments: execArguments, cancellationToken: cancellationToken);
                 }
             }
             catch (Exception ex) 
@@ -107,9 +108,9 @@ namespace Managment.Services.Common
 
         #region Private methods
 
-        private async Task StartDotnetExecAsync(string exeсPath, CancellationToken cancellationToken)
+        private async Task StartDotnetExecAsync(string exeсPath, string arguments, CancellationToken cancellationToken)
         {
-            string args = string.Format($"exec {exeсPath}");
+            string args = string.Format($"exec {exeсPath} {arguments}");
             string workingDirectory = Path.GetDirectoryName(exeсPath);
             string projectName = Path.GetFileNameWithoutExtension(exeсPath);
 

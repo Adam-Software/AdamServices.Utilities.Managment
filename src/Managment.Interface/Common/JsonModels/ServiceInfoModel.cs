@@ -4,9 +4,11 @@ namespace Managment.Interface.Common.JsonModels
 {
     public class ServiceInfoModel
     {
-        public ServiceSection Services { get; set; } = new ServiceSection();
-        public CompilerOptions CompilerOptions { get; set; } = new CompilerOptions();
-        public Systemd Systemd { get; set; } = new Systemd();
+        public ServiceSection Services { get; set; } = new();
+
+        public ExecutionOptionsSection ExecutionOptions = new();
+        public CompilerOptions CompilerOptions { get; set; } = new();
+        public Systemd Systemd { get; set; } = new();
     }
 
     public class ServiceSection
@@ -15,6 +17,11 @@ namespace Managment.Interface.Common.JsonModels
         public string Version { get; set; } = string.Empty;
         public ProjectType ProjectType { get; set; } = ProjectType.None;
         public List<string> Dependencies { get; set; } = [];   
+    }
+
+    public class ExecutionOptionsSection
+    {
+        public string Arguments { get; set; } = string.Empty;
     }
 
     public class CompilerOptions
