@@ -8,7 +8,7 @@
     /* service dependencies on other services */
     "dependencies": []
   },
-  "ExecutionOptions": {
+  "executionOptions": {
       "arguments": "-u"
   },
   "compilerOptions": {
