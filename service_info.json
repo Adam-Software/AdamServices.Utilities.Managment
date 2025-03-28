@@ -4,6 +4,7 @@
     "name": "Managment",
     /* service version */
     "version": "1.0",
+    "projectType": "DotnetProject",
     /* service dependencies on other services */
     "dependencies": []
   },
