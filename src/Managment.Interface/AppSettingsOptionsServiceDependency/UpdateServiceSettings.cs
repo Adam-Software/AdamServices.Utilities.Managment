@@ -5,6 +5,6 @@ namespace Managment.Interface.AppSettingsOptionsServiceDependency
 {
     public class UpdateServiceSettings
     {
-        public List<RepositoriesBaseInfo> ServicesRepositories { get; set; }
+        public List<RepositoriesBaseInfo> ServicesRepositories { get; set; } = [];
     }
 }

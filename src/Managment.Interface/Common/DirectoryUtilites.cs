@@ -25,20 +25,20 @@ namespace Managment.Interface.Common
             }
         }
 
-        public static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
+        public static void CopyDirectory(string sourceDirrectory, string destinationDirrectory, bool recursive)
         {
-            var dir = new DirectoryInfo(sourceDir);
+            var dir = new DirectoryInfo(sourceDirrectory);
 
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
 
             DirectoryInfo[] dirs = dir.GetDirectories();
 
-            Directory.CreateDirectory(destinationDir);
+            Directory.CreateDirectory(destinationDirrectory);
 
             foreach (FileInfo file in dir.GetFiles())
             {
-                string targetFilePath = Path.Combine(destinationDir, file.Name);
+                string targetFilePath = Path.Combine(destinationDirrectory, file.Name);
                 file.CopyTo(targetFilePath);
             }
 
@@ -46,7 +46,7 @@ namespace Managment.Interface.Common
             {
                 foreach (DirectoryInfo subDir in dirs)
                 {
-                    string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+                    string newDestinationDir = Path.Combine(destinationDirrectory, subDir.Name);
                     CopyDirectory(subDir.FullName, newDestinationDir, true);
                 }
             }

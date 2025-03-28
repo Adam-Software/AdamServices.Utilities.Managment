@@ -2,6 +2,6 @@
 {
     public class DotnetServiceSettings
     {
-        public string DotnetVerbosityLevel { get; set; }
+        public string DotnetVerbosityLevel { get; set; } = "o";
     }
 }

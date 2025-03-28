@@ -13,7 +13,6 @@ namespace Managment.Services.Common
         #region Services
 
         private readonly ILogger<ProgramHostedService> mLogger;
-        private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
         private readonly IUpdateService mUpdateService;
         private readonly IDownloadService mDownloadService;
         private readonly IDotnetService mDotnetService;
@@ -36,7 +35,6 @@ namespace Managment.Services.Common
         {
             mLogger = serviceProvider.GetRequiredService<ILogger<ProgramHostedService>>();
 
-            mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
             mUpdateService = serviceProvider.GetRequiredService<IUpdateService>();
             mDownloadService = serviceProvider.GetRequiredService<IDownloadService>();
             mDotnetService = serviceProvider.GetRequiredService<IDotnetService>();
@@ -63,6 +61,10 @@ namespace Managment.Services.Common
         {
             mUpdateService.RaiseCheckUpdateStartedEvent += RaiseCheckUpdateStartedEvent;
             mUpdateService.RaiseCheckUpdateFinishedEvent += RaiseCheckUpdateFinishedEvent;
+
+            mUpdateService.RaiseCheckUpdatesPublishedProjectStartedEvent += RaiseCheckUpdatesPublishedProjectStartedEvent;
+            mUpdateService.RaiseCheckUpdatesPublishedProjectFinishedEvent += RaiseCheckUpdatesPublishedProjectFinishedEvent;
+
             mDownloadService.RaiseDownloadSourceStartedEvent += RaiseDownloadSourceStartedEvent;
             mDownloadService.RaiseDownloadSourceFinishedEvent += RaiseDownloadSourceFinishedEvent;
 
@@ -73,6 +75,10 @@ namespace Managment.Services.Common
         {
             mUpdateService.RaiseCheckUpdateStartedEvent -= RaiseCheckUpdateStartedEvent;
             mUpdateService.RaiseCheckUpdateFinishedEvent -= RaiseCheckUpdateFinishedEvent;
+
+            mUpdateService.RaiseCheckUpdatesPublishedProjectStartedEvent -= RaiseCheckUpdatesPublishedProjectStartedEvent;
+            mUpdateService.RaiseCheckUpdatesPublishedProjectFinishedEvent -= RaiseCheckUpdatesPublishedProjectFinishedEvent;
+
             mDownloadService.RaiseDownloadSourceStartedEvent -= RaiseDownloadSourceStartedEvent;
             mDownloadService.RaiseDownloadSourceFinishedEvent -= RaiseDownloadSourceFinishedEvent;
 
@@ -91,6 +97,16 @@ namespace Managment.Services.Common
         private void RaiseCheckUpdateFinishedEvent(object sender)
         {
             mLogger.LogTrace("=== Raise DownloadAndCheckUpdateStarted Event ===");
+        }
+
+        private void RaiseCheckUpdatesPublishedProjectStartedEvent(object sender)
+        {
+            mLogger.LogTrace("=== Raise CheckUpdatesPublishedProjectStarted Event ===");
+        }
+
+        private void RaiseCheckUpdatesPublishedProjectFinishedEvent(object sender)
+        {
+            mLogger.LogTrace("=== Raise CheckUpdatesPublishedProjectFinished Event ===");
         }
 
         private void RaiseDownloadSourceStartedEvent(object sender)
@@ -146,7 +162,7 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in update mode");
 
-                mUpdateService.CheckUpdatesForInstalledProject().Wait(CancellationToken.None);
+                mUpdateService.CheckUpdatesPublishedProject().Wait(CancellationToken.None);
 
                 return Task.CompletedTask;
             }
@@ -155,7 +171,7 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in installation mode");
 
-                mUpdateService.DownloadUpdateInfoFiles().Wait(CancellationToken.None);
+                mUpdateService.DownloadUpdateFileAsync().Wait(CancellationToken.None);
                 mDownloadService.DownloadSource().Wait(CancellationToken.None);
                 mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
                 

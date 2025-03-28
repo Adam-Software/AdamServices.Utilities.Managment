@@ -4,7 +4,7 @@ namespace Managment.Interface
 {
     public interface IAppSettingsOptionsService
     {
-        public string WorkingDirrectory { get; set; }
+        public string WorkingDirrectory { get; set; } 
         public UpdateServiceSettings UpdateServiceSettings { get; set; }
         public GitHubClientServiceSettings GitHubClientServiceSettings { get; set; }
         public DotnetServiceSettings DotnetServiceSettings { set; get; }

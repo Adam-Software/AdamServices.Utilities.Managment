@@ -3,7 +3,7 @@
     public class CommonFilesAndDirectoriesNames
     {
         /* File names */
-        public const string TempInfoJsonFile = "temp.json";
+        public const string TempInfoJsonFileName = "temp.json";
         public const string DefaultServiceInfoName = "service_info.json";
 
         /* Dirrectory name */

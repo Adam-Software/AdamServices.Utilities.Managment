@@ -53,6 +53,7 @@ namespace Managment
                             option.ShutdownTimeout = TimeSpan.FromSeconds(5);
                         });
 
+                        services.AddSingleton<IJsonTempFilesWorkerService, JsonTempFilesWorkerService>();
                         services.AddSingleton<IGitHubCilentService, GitHubCilentService>();
                         services.AddSingleton<IUpdateService, UpdateService>();
                         services.AddSingleton<IDownloadService, DownloadService>();

@@ -7,7 +7,7 @@ using Octokit;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 
@@ -19,6 +19,8 @@ namespace Managment.Services.Common
 
         public event CheckUpdateStartedEventHandler RaiseCheckUpdateStartedEvent;
         public event CheckUpdateFinishedEventHandler RaiseCheckUpdateFinishedEvent;
+        public event CheckUpdatesPublishedProjectStartedEventHandler RaiseCheckUpdatesPublishedProjectStartedEvent;
+        public event CheckUpdatesPublishedProjectFinishedEventHandler RaiseCheckUpdatesPublishedProjectFinishedEvent;
 
         #endregion
 
@@ -26,14 +28,14 @@ namespace Managment.Services.Common
 
         private readonly ILogger<UpdateService> mLogger;
         private readonly IAppSettingsOptionsService mAppSettingsOptionsService;
+        private readonly IJsonTempFilesWorkerService mTempFileWorkerService;
 
         #endregion
 
         #region Var
 
         private readonly GitHubClient mGitHubClient;
-        private readonly string mPublishDirrectory;
-        
+
         #endregion
 
         #region ~
@@ -41,13 +43,11 @@ namespace Managment.Services.Common
         public UpdateService(IServiceProvider serviceProvider) 
         {
             mLogger = serviceProvider.GetRequiredService<ILogger<UpdateService>>();
-
             mAppSettingsOptionsService = serviceProvider.GetRequiredService<IAppSettingsOptionsService>();
+            mTempFileWorkerService = serviceProvider.GetService<IJsonTempFilesWorkerService>();
+
             mGitHubClient = serviceProvider.GetRequiredService<IGitHubCilentService>().GitHubClient;
 
-            string publishDirrectory = Path.Combine(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.PublishDirrectory);
-            mPublishDirrectory = new DirectoryInfo(publishDirrectory).FullName;
-            
             mLogger.LogInformation("=== UpdateService. Start ===");
         }
 
@@ -55,11 +55,9 @@ namespace Managment.Services.Common
 
         #region Public methods
 
-        public async Task DownloadUpdateInfoFiles()
+        public async Task DownloadUpdateFileAsync()
         {
             OnRaiseCheckUpdateStartedEvent();
-
-            Directory.CreateDirectory(mAppSettingsOptionsService.WorkingDirrectory);
 
             await DownloadRepositoriesListAsync();
             await DownloadRepositoriesInfoAsync();
@@ -67,10 +65,14 @@ namespace Managment.Services.Common
             OnRaiseCheckUpdateFinishedEvent();
         }
 
-        public async Task CheckUpdatesForInstalledProject()
+        public async Task CheckUpdatesPublishedProject()
         {
-            //await DownloadUpdateInfoFiles();
-            await EqualInstalledAndRemoteVersionAsync();
+            OnRaiseCheckUpdatesPublishedProjectStartedEvent();
+
+            await DownloadUpdateFileAsync();
+            await EqualPublishedAndRemoteVersionAsync();
+
+            OnRaiseCheckUpdatesPublishedProjectFinishedEvent();
         }
 
         public void Dispose()
@@ -97,7 +99,7 @@ namespace Managment.Services.Common
                 try
                 {
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(serviceRepository.RepositoriesOwner, serviceRepository.RepositoriesName, serviceRepository.ServiceFilePath);
-                    List<ServiceFileContent> json = JsonUtilites.SerializeJson<List<ServiceFileContent>>(fileContent);
+                    List<ServiceFileContent> json = mTempFileWorkerService.SerializeJson<List<ServiceFileContent>>(fileContent);
 
                     serviceRepositories.RepositoriesName = serviceRepository.RepositoriesName;
                     serviceRepositories.RepositoriesOwner = serviceRepository.RepositoriesOwner;
@@ -109,13 +111,18 @@ namespace Managment.Services.Common
                     mLogger.LogError("Not found repository RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}",
                         serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServiceFilePath);
                 }
+                catch (HttpRequestException)
+                {
+                    mLogger.LogError("Not found repository RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}",
+                        serviceRepository.RepositoriesName, serviceRepository.RepositoriesOwner, serviceRepository.ServiceFilePath);
+                }
                 catch (Exception ex)
                 {
                     mLogger.LogError("{error}", ex);
                 }
             }
 
-            await JsonUtilites.SerializeAndSaveJsonFilesAsync(serviceRepositories, mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+            await mTempFileWorkerService.SaveTempFileAsync(serviceRepositories);
 
             mLogger.LogInformation("=== Download Repositories Finished ===");
         }
@@ -124,9 +131,9 @@ namespace Managment.Services.Common
         {
             mLogger.LogInformation("=== Download Service Info Files ===");
             
-            ServiceRepositories tempModel = await JsonUtilites.ReadJsonFileAsync<ServiceRepositories>(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+            ServiceRepositories serviceRepositories = await mTempFileWorkerService.ReadTempFileAsync();
 
-            foreach (ServiceFileContent servicesListFileContent in tempModel.ServiceFilesContent)
+            foreach (ServiceFileContent servicesListFileContent in serviceRepositories.ServiceFilesContent)
             {
                 try
                 {
@@ -137,10 +144,10 @@ namespace Managment.Services.Common
 
                     byte[] fileContent = await mGitHubClient.Repository.Content.GetRawContent(servicesListFileContent.RepositoriesOwner, servicesListFileContent.RepositoriesName, serviceFilePath);
 
-                    ServiceInfoModel json = JsonUtilites.SerializeJson<ServiceInfoModel>(fileContent);
+                    ServiceInfoModel json = mTempFileWorkerService.SerializeJson<ServiceInfoModel>(fileContent);
                     servicesListFileContent.ServiceInfoFileContent = json;
 
-                    mLogger.LogInformation("Start download service info file from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", 
+                    mLogger.LogInformation("Download service info file from RepositoriesName:{RepositoriesName} RepositoriesOwner:{RepositoriesOwner} FileName:{ServicesListFilePath}", 
                         servicesListFileContent.RepositoriesName, servicesListFileContent.RepositoriesOwner, serviceFilePath);
                 }
                 catch (Exception ex)
@@ -149,18 +156,18 @@ namespace Managment.Services.Common
                 }
             }
             
-            await JsonUtilites.SerializeAndSaveJsonFilesAsync(tempModel, mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+            await mTempFileWorkerService.SaveTempFileAsync(serviceRepositories);
 
             mLogger.LogInformation("=== Download Service Info Files Finished ===");
         }
 
-        private async Task EqualInstalledAndRemoteVersionAsync()
+        private async Task EqualPublishedAndRemoteVersionAsync()
         {
             mLogger.LogInformation("=== Equal Installed And Remote Version Start ===");
 
             try
             {
-                ServiceRepositories serviceRepositories = await JsonUtilites.ReadJsonFileAsync<ServiceRepositories>(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
+                ServiceRepositories serviceRepositories = await mTempFileWorkerService.ReadTempFileAsync();
                 await CompareVersionAsync(serviceRepositories);
             }
             catch (FileNotFoundException ex)
@@ -182,8 +189,7 @@ namespace Managment.Services.Common
             {
                 try
                 {
-                    string publishDirrectory = Path.Combine(mPublishDirrectory, remoteServiceRepositories.RepositoriesName);
-                    ServiceInfoModel installedFileInfo = await JsonUtilites.ReadJsonFileAsync<ServiceInfoModel>(publishDirrectory, "service_info.json");
+                    ServiceInfoModel installedFileInfo = await mTempFileWorkerService.ReadPublishedProjectFileInfoAsync(remoteServiceRepositories.RepositoriesName);
                     ServiceInfoModel remoteFileInfo = remoteServiceRepositories.ServiceInfoFileContent;
 
                     mLogger.LogInformation("Installed {projectName} project version {projectVersion}", installedFileInfo.Services.Name, installedFileInfo.Services.Version);
@@ -211,7 +217,7 @@ namespace Managment.Services.Common
                 catch(FileNotFoundException ex)
                 {
                     mLogger.LogError("No information file found for the project {projectName}. Need install project!", remoteServiceRepositories.ServiceInfoFileContent.Services.Name);
-                    mLogger.LogError(ex.Message);
+                    mLogger.LogError("{error}", ex.Message);
 
                     remoteServiceRepositories.NeedInstall = true;
                 }
@@ -220,8 +226,7 @@ namespace Managment.Services.Common
                     mLogger.LogInformation("{error}", ex.Message);
                 }
 
-                await JsonUtilites.SerializeAndSaveJsonFilesAsync(serviceRepositories, mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.TempInfoJsonFile);
-
+                await mTempFileWorkerService.SaveTempFileAsync(serviceRepositories);
             }
         }
 
@@ -238,6 +243,17 @@ namespace Managment.Services.Common
         protected virtual void OnRaiseCheckUpdateFinishedEvent()
         {
             CheckUpdateFinishedEventHandler raiseEvent = RaiseCheckUpdateFinishedEvent;
+            raiseEvent?.Invoke(this);
+        }
+        private void OnRaiseCheckUpdatesPublishedProjectStartedEvent()
+        {
+            CheckUpdatesPublishedProjectStartedEventHandler raiseEvent = RaiseCheckUpdatesPublishedProjectStartedEvent;
+            raiseEvent?.Invoke(this);
+        }
+
+        private void OnRaiseCheckUpdatesPublishedProjectFinishedEvent()
+        {
+            CheckUpdatesPublishedProjectFinishedEventHandler raiseEvent = RaiseCheckUpdatesPublishedProjectFinishedEvent;
             raiseEvent?.Invoke(this);
         }
 
