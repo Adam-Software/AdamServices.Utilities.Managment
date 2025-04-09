@@ -47,7 +47,7 @@ jobs:
 
     - name: Publish
       run: | 
-        dotnet publish src/Managment --output publish -c Release --self-contained true --runtime linux-arm64 --version-suffix arm-64 --no-restore -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
+        dotnet publish src/Managment --output publish -c Release --self-contained true --runtime linux-arm64 --version-suffix linux-arm64 --no-restore -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
         dotnet publish src/Managment --output publish -c Release --self-contained true --runtime win-x64 --version-suffix win-x64 --no-restore -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
       
     #- name: Pack nuget packages
