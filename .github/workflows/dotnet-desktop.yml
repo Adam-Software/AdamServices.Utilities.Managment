@@ -46,7 +46,7 @@ jobs:
     #  run: dotnet build --no-restore -c Release /p:Version=$VERSION 
 
     - name: Publish
-      run: dotnet publish src/Managment --output publish -c Release --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --runtimes linux-arm64
+      run: dotnet publish src/Managment --output publish -c Release --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --runtime linux-arm64
         
         #dotnet publish src/Managment --output publish -c Release --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --runtimes win-x64
       
