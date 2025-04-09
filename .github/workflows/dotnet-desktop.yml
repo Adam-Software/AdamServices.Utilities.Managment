@@ -1,0 +1,74 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET Bild And Publish Release
+
+on:
+  push:
+    #branches: 
+      #- "**"
+    tags: 
+      - "v.[0-9]+.[0-9]+.[0-9]+"
+  #pull_request:
+  #  branches: 
+  #    - "**"
+env:
+  VERSION: 1.0.0
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Namespace for nuget source
+  #NAMESPACE: Adam-Software
+  # Username for nuget source
+  #USERNAME: vertigra
+    
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set Version Variable
+      if: ${{ github.ref_type == 'tag' }}
+      env:
+        TAG: ${{ github.ref_name }}
+      run: echo "VERSION=${TAG#v.}" >> $GITHUB_ENV
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --no-restore -c Release /p:Version=$VERSION 
+      
+    #- name: Pack nuget packages
+    #  run: dotnet pack --output nupkgs --no-restore --no-build /p:PackageVersion=$VERSION
+
+    #- name: Run TestApp
+    #  run: dotnet run --project src/ServiceFileCreator.TestApp/ -c Release
+    
+    #- name: upload nuget package to nuget.org
+    #  if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
+    #  run: dotnet nuget push nupkgs/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+
+    #- name: Add nuget source
+    #  run: dotnet nuget add source --username $USERNAME --password $GITHUB_TOKEN --store-password-in-clear-text --name github "https://nuget.pkg.github.com/$NAMESPACE/index.json"
+      
+    #- name: Upload nuget package to github package
+    #  if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
+    #  run:  dotnet nuget push nupkgs/*.nupkg --source "github" --skip-duplicate
+      
+    - name: Publish Release
+      uses: "slord399/action-automatic-releases@v1.0.1"
+      with:
+        title: "Release v.${{ env.VERSION }}"
+        repo_token: "${{ env.GITHUB_TOKEN }}"
+        automatic_release_tag: "v.${{ env.VERSION }}"
+        prerelease: false
+        files: |
+            nupkgs/*.nupkg
+            *.json
