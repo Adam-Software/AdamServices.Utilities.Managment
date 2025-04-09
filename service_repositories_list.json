@@ -10,10 +10,5 @@
 		 * Optional. Default path /service_info.json
 		 */
 		"serviceFilePath": ""
-	},
-	{
-		"repositoriesOwner": "Adam-Software",
-		"repositoriesName": "AdamServices.Utilities.Managment",
-		"serviceFilePath": ""
 	}
 ]

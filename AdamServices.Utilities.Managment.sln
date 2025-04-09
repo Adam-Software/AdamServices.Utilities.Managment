@@ -18,11 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "services_files", "services_
 		service_repositories_list.json = service_repositories_list.json
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "package_description", "package_description", "{9EFAB1E4-E0EB-42BB-B327-FD4341C7D1B4}"
-	ProjectSection(SolutionItems) = preProject
-		service_info.json = service_info.json
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

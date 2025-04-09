@@ -137,7 +137,7 @@ namespace Managment.Services.Common
             {
                 try
                 {
-                    string serviceFilePath = CommonFilesAndDirectoriesNames.DefaultServiceInfoName;
+                    string serviceFilePath = CommonFilesAndDirectoriesNames.ServiceInfoFileName;
 
                     if (!string.IsNullOrEmpty(servicesListFileContent.ServiceFilePath))
                         serviceFilePath = servicesListFileContent.ServiceFilePath;

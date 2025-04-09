@@ -73,14 +73,14 @@ namespace Managment.Services.Common
         public async Task<ServiceInfoModel> ReadPublishedProjectFileInfoAsync(string repositoriesName)
         {
             string publishDirrectory = Path.Combine(mPublishDirrectory, repositoriesName);
-            string publishedProjectFileInfoPath = Path.Combine(publishDirrectory, CommonFilesAndDirectoriesNames.DefaultServiceInfoName);
+            string publishedProjectFileInfoPath = Path.Combine(publishDirrectory, CommonFilesAndDirectoriesNames.ServiceInfoFileName);
 
             if (!File.Exists(publishedProjectFileInfoPath))
             {
                 throw new FileNotFoundException($"File not found: {publishedProjectFileInfoPath}");
             }
 
-            byte[] installedFileInfoJson = await File.ReadAllBytesAsync(Path.Combine(publishDirrectory, CommonFilesAndDirectoriesNames.DefaultServiceInfoName));
+            byte[] installedFileInfoJson = await File.ReadAllBytesAsync(Path.Combine(publishDirrectory, CommonFilesAndDirectoriesNames.ServiceInfoFileName));
             return SerializeJson<ServiceInfoModel>(installedFileInfoJson);
         }
 
@@ -95,14 +95,14 @@ namespace Managment.Services.Common
 
             foreach (var projectDirectory in projectDirectories) 
             {
-                string publishedProjectFileInfoPath = Path.Combine(projectDirectory, CommonFilesAndDirectoriesNames.DefaultServiceInfoName);
+                string publishedProjectFileInfoPath = Path.Combine(projectDirectory, CommonFilesAndDirectoriesNames.ServiceInfoFileName);
 
                 if (!File.Exists(publishedProjectFileInfoPath))
                 {
                     continue;
                 }
 
-                byte[] installedFileInfoJson = await File.ReadAllBytesAsync(Path.Combine(projectDirectory, CommonFilesAndDirectoriesNames.DefaultServiceInfoName));
+                byte[] installedFileInfoJson = await File.ReadAllBytesAsync(Path.Combine(projectDirectory, CommonFilesAndDirectoriesNames.ServiceInfoFileName));
                 var serviceInfoModel = SerializeJson<ServiceInfoModel>(installedFileInfoJson);
                 serviceInfoModels.Add(projectDirectory, serviceInfoModel);
             }
