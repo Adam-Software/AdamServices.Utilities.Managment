@@ -45,14 +45,14 @@ jobs:
       with:
         files: publish/arm64
         recursive: true
-        dest: "Managment arm64.v.${{ env.VERSION }}.portable.zip"
+        dest: Managment.arm64.portable.zip
     
     - name: Zip win64 release
       uses: vimtor/action-zip@v1.2
       with:
         files: publish/win64
         recursive: true
-        dest: "Managment.win64.v.${{ env.VERSION }}.portable.zip"
+        dest: Managment.win64.portable.zip
 
     - name: Publish Release
       uses: "slord399/action-automatic-releases@v1.0.1"
