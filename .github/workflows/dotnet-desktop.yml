@@ -53,7 +53,8 @@ jobs:
     - name: Zip arm64 release
       uses: montudor/action-zip@v1
       with:
-        args: zip -qq -r "Managment arm64.v.${{ env.VERSION }}.zip" publish/arm64
+        args: zip -qq -r "Managment arm64.v.${{ env.VERSION }}.zip" *
+        working-directory: publish/arm64
 
     - name: Zip win64 release
       uses: montudor/action-zip@v1
