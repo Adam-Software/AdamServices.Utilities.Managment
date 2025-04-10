@@ -55,8 +55,8 @@ jobs:
       with:
         files: publish/arm64
         recursive: true
-        dest: "Managment arm64.v.${{ env.VERSION }}.portable.zip 
-
+        dest: "Managment arm64.v.${{ env.VERSION }}.portable.zip"
+    
     - name: Zip win64 release
       uses: vimtor/action-zip@v1.2
       with:
