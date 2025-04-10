@@ -50,17 +50,19 @@ jobs:
         dotnet publish src/Managment --output publish/arm64 -c Release --self-contained true --runtime linux-arm64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
         dotnet publish src/Managment --output publish/win64 -c Release --self-contained true --runtime win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
 
-    #- name: Zip arm64 release
-    #  uses: montudor/action-zip@v1
-    #  with:
-    #    args: zip -qq -d -r "Managment arm64.v.${{ env.VERSION }}.zip" publish/arm64
+    - name: Zip arm64 release
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: publish/arm64
+        recursive: true
+        dest: "Managment arm64.v.${{ env.VERSION }}.portable.zip 
 
     - name: Zip win64 release
       uses: vimtor/action-zip@v1.2
       with:
         files: publish/win64
         recursive: true
-        dest: "Managment.x64.v.${{ env.VERSION }}.zip"
+        dest: "Managment.win64.v.${{ env.VERSION }}.portable.zip"
 
 
         
