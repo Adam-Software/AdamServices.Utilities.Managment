@@ -54,7 +54,7 @@ jobs:
       uses: montudor/action-zip@v1
       with:
         args: zip -qq -r "Managment arm64.v.${{ env.VERSION }}.zip" Managment appsettings.json
-        working-directory: publish/arm64
+        working-directory: /publish/arm64
 
     - name: Zip win64 release
       uses: montudor/action-zip@v1
