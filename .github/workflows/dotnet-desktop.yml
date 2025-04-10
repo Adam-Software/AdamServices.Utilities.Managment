@@ -52,7 +52,10 @@ jobs:
 
     - name: Making files executable
       run: chmod +x publish/arm64/Managment
-      
+
+    - name: Test making files executable
+      run: ./publish/arm64/Managment
+  
     - name: Zip arm64 release
       uses: vimtor/action-zip@v1.2
       with:
