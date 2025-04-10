@@ -5,8 +5,8 @@ name: .NET Bild And Publish Release
 
 on:
   push:
-    branches: 
-      - "**"
+    #branches: 
+    #  - "**"
     tags: 
       - "v.[0-9]+.[0-9]+.[0-9]+"
   #pull_request:
@@ -15,11 +15,7 @@ on:
 env:
   VERSION: 1.0.0
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Namespace for nuget source
-  #NAMESPACE: Adam-Software
-  # Username for nuget source
-  #USERNAME: vertigra
-    
+
 jobs:
   build:
 
@@ -39,24 +35,10 @@ jobs:
       with:
         dotnet-version: 8.0.x
         
-    #- name: Restore dependencies
-    #  run: dotnet restore
-      
-    #- name: Build
-    #  run: dotnet build --no-restore -c Release /p:Version=$VERSION 
-
     - name: Publish
       run: | 
-        dotnet publish src/Managment --output publish/arm64 -c Release --self-contained true --runtime linux-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
+        dotnet publish src/Managment --output publish/arm64 -c Release --self-contained true --runtime linux-arm64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
         dotnet publish src/Managment --output publish/win64 -c Release --self-contained true --runtime win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
-
-    - name: Making files executable
-      run: |
-        ls -ls publish/arm64
-        chmod +x publish/arm64/Managment
-
-    - name: Test making files executable
-      run: ./publish/arm64/Managment
   
     - name: Zip arm64 release
       uses: vimtor/action-zip@v1.2
@@ -72,27 +54,6 @@ jobs:
         recursive: true
         dest: "Managment.win64.v.${{ env.VERSION }}.portable.zip"
 
-
-        
-          
-    
-    #- name: Pack nuget packages
-    #  run: dotnet pack --output nupkgs --no-restore --no-build /p:PackageVersion=$VERSION
-
-    #- name: Run TestApp
-    #  run: dotnet run --project src/ServiceFileCreator.TestApp/ -c Release
-    
-    #- name: upload nuget package to nuget.org
-    #  if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
-    #  run: dotnet nuget push nupkgs/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
-
-    #- name: Add nuget source
-    #  run: dotnet nuget add source --username $USERNAME --password $GITHUB_TOKEN --store-password-in-clear-text --name github "https://nuget.pkg.github.com/$NAMESPACE/index.json"
-      
-    #- name: Upload nuget package to github package
-    #  if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
-    #  run:  dotnet nuget push nupkgs/*.nupkg --source "github" --skip-duplicate
-      
     - name: Publish Release
       uses: "slord399/action-automatic-releases@v1.0.1"
       with:
@@ -101,5 +62,4 @@ jobs:
         automatic_release_tag: "v.${{ env.VERSION }}"
         prerelease: false
         files: |
-            *.zip
-            
+            *.zip            
