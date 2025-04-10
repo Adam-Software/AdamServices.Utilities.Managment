@@ -50,6 +50,9 @@ jobs:
         dotnet publish src/Managment --output publish/arm64 -c Release --self-contained true --runtime linux-arm64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
         dotnet publish src/Managment --output publish/win64 -c Release --self-contained true --runtime win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
 
+    - name: Making files executable
+      run: chmod +x publish/arm64/Managment
+      
     - name: Zip arm64 release
       uses: vimtor/action-zip@v1.2
       with:
