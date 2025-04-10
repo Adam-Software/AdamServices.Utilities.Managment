@@ -1,7 +1,7 @@
 ﻿using CommandLine;
 using Managment.Interface;
 
-namespace Managment.Core.Services
+namespace Managment.Services.Common
 {
 
     public class AppArguments : IAppArguments
