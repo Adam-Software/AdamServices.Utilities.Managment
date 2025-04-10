@@ -50,12 +50,19 @@ jobs:
         dotnet publish src/Managment --output publish/arm64 -c Release --self-contained true --runtime linux-arm64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
         dotnet publish src/Managment --output publish/win -c Release --self-contained true --runtime win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
 
-    - name: Zip release
+    - name: Zip arm64 release
       uses: montudor/action-zip@v1
       with:
-        args: | 
-          zip -qq -r arm64.zip publish/arm64
-          zip -qq -r winx64.zip publish/win
+        args: zip -qq -r arm64.$VERSION.zip publish/arm64
+
+    - name: Zip win64 release
+      uses: montudor/action-zip@v1
+      with:
+        args: zip -qq -r winx64.$VERSION.zip publish/win
+
+
+        
+          
     
     #- name: Pack nuget packages
     #  run: dotnet pack --output nupkgs --no-restore --no-build /p:PackageVersion=$VERSION
