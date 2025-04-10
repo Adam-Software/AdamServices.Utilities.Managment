@@ -80,13 +80,13 @@ namespace Managment.Services.Common
             OnRaiseDownloadSourceFinishedEvent();
         }
 
-        public async Task DownloadUpdate()
-        {
+        //public async Task DownloadUpdate()
+        //{
             //await ReadServiceUpdateFile();
             //await DownloadZipFromRepositoryAsync();
             //await ExtractSourceFiles();
             //await CopySourceFilesToBuildDirrectory();
-        }
+        //}
 
         public void Dispose()
         {
