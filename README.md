@@ -1,5 +1,5 @@
 # AdamServices.Utilities.Managment
-[![.NET Build And Publish Release](https://github.com/Adam-Software/AdamServices.Utilities.Managment/actions/workflows/dotnet-desktop.yml/badge.svg)](https://github.com/Adam-Software/AdamServices.Utilities.Managment/actions/workflows/dotnet-desktop.yml)
+[![.NET Build And Publish Release](https://github.com/Adam-Software/AdamServices.Utilities.Managment/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Adam-Software/AdamServices.Utilities.Managment/actions/workflows/dotnet.yml)
 
 A utility for downloading, running, and updating AdamServices.* projects.
 
