@@ -16,14 +16,64 @@ Use the shared [wiki](https://github.com/Adam-Software/AdamServices.Utilities.Ma
   ```
   https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip
   ```
+```
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
 ### Install
 * Windows [x64]
-  * Download using the [permalink](https://github.com/Adam-Software/AdamServices.Utilities.Managment/edit/master/README.md#for-users)
+  * Download using the [permalink](#permanent-links-to-releases)
   * Unzip and run Managmet.exe by specifying the required command line argument
 
 * Linux [arm64]
-  * Download using the [permalink](https://github.com/Adam-Software/AdamServices.Utilities.Managment/edit/master/README.md#for-users)
+  * Download using the [permalink](#permanent-links-to-releases)
     ```bash
     wget  https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip
     ```
