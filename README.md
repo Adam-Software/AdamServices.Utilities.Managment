@@ -7,17 +7,26 @@ Use the shared [wiki](https://github.com/Adam-Software/AdamServices.Utilities.Ma
 
 ## For users
 
-### Install
-
+### Permanent links to releases
 * Windows [x64]
-  * Download using the permalink [https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.win64.portable.zip](https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.win64.portable.zip)
+  ```
+  https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.win64.portable.zip
+  ```
+* Linux [arm64]
+  ```
+  https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip
+  ```
+
+### Install
+* Windows [x64]
+  * Download using the [permalink](https://github.com/Adam-Software/AdamServices.Utilities.Managment/edit/master/README.md#for-users)
   * Unzip and run Managmet.exe by specifying the required command line argument
 
 * Linux [arm64]
-  * Download using the permalink [ https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip]( https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip)
-      ```bash
-      wget  https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip
-      ```
+  * Download using the [permalink](https://github.com/Adam-Software/AdamServices.Utilities.Managment/edit/master/README.md#for-users)
+    ```bash
+    wget  https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip
+    ```
   * Unzip and make the Management file executable
     ```bash
     unzip Managment.arm64.portable.zip -d ServicesManagment && chmod +x ServicesManagment/Managment
