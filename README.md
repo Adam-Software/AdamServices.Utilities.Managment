@@ -3,7 +3,7 @@
 ![GitHub License](https://img.shields.io/github/license/Adam-Software/AdamServices.Utilities.Managment)
 ![GitHub Release](https://img.shields.io/github/v/release/Adam-Software/AdamServices.Utilities.Managment)
 
-A utility for downloading, running, and updating AdamServices.* projects.
+A utility for downloading, running, and updating [`adamservices-services`](https://github.com/topics/adamservices-services) projects.
 
 Use the shared [wiki](https://github.com/Adam-Software/AdamServices.Utilities.Managment/wiki) to find information about the project.
 
