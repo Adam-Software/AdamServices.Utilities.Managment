@@ -16,61 +16,10 @@ Use the shared [wiki](https://github.com/Adam-Software/AdamServices.Utilities.Ma
   ```
   https://github.com/Adam-Software/AdamServices.Utilities.Managment/releases/latest/download/Managment.arm64.portable.zip
   ```
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```
 ### Install
 * Windows [x64]
   * Download using the [permalink](#permanent-links-to-releases)
-  * Unzip and run Managmet.exe by specifying the required command line argument
+  * Unzip and run Managmet.exe by specifying the [required command line arguments](#required-command-line-arguments)
 
 * Linux [arm64]
   * Download using the [permalink](#permanent-links-to-releases)
@@ -81,3 +30,13 @@ Use the shared [wiki](https://github.com/Adam-Software/AdamServices.Utilities.Ma
     ```bash
     unzip Managment.arm64.portable.zip -d ServicesManagment && chmod +x ServicesManagment/Managment
     ```
+  * Run Management by specifying the [required command line arguments](#required-command-line-arguments)
+    ```bash
+    cd ServicesManagment && ./Managment
+    ```
+
+### Required command line arguments
+* `-i`, `--install`  Install mode. Download and install services to temp dirrectory
+* `-r`, `--run`  Run mode. Launches previously installed to temp dirrectory services
+* `-u`, `--update` Update mode. Update installed to temp dirrectory services
+
