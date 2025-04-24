@@ -1,12 +1,10 @@
 ﻿using CommandLine;
-using Managment.Interface;
 
 namespace Managment.Services.Common
 {
-
-    public class AppArguments : IAppArguments
+    [Verb("arguments", isDefault: true, Hidden = false)]
+    public class ArgumentsParserService 
     {
-
         [Option(shortName:'u', longName: "update", Required = false, HelpText = "Update mode. Update installed services")]
         public bool Update { get; set; }
 

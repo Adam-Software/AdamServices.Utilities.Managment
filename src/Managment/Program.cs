@@ -1,4 +1,5 @@
-﻿using CommandLine;
+﻿
+using DefaultArguments.Extensions;
 using Managment.Core.Services;
 using Managment.Interface;
 using Managment.Services.Common;
@@ -26,12 +27,8 @@ namespace Managment
 
                     .ConfigureServices((context, services) =>
                     {
-                        _ = Parser.Default.ParseArguments<AppArguments>(args)
-                            .WithParsed(appArgs =>
-                            {
-                                services.AddSingleton<IAppArguments>(appArgs);
-                            });
-                 
+                        services.AddAdamArgumentsParserTransient<ArgumentsParserService>(args);
+
                         AppSettingsOptionsService options = new();
                         context.Configuration.GetRequiredSection("AppSettingsOptions").Bind(options);
 
@@ -64,9 +61,7 @@ namespace Managment
 
                     .Build();
 
-            await host.RunAsync();
-            
-                
+            await host.ParseAndRunAsync(); 
         }
     }
 }

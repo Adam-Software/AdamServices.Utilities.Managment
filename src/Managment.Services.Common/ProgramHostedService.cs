@@ -16,8 +16,9 @@ namespace Managment.Services.Common
         private readonly IUpdateService mUpdateService;
         private readonly IDownloadService mDownloadService;
         private readonly IDotnetService mDotnetService;
-        private readonly IAppArguments mAppArguments;
         private readonly IHostApplicationLifetime mAppLifetime;
+
+        private readonly ArgumentsParserService mAppArguments;
 
         #endregion
 
@@ -40,7 +41,7 @@ namespace Managment.Services.Common
             mDotnetService = serviceProvider.GetRequiredService<IDotnetService>();
             mAppLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
 
-            mAppArguments = serviceProvider.GetService<IAppArguments>();
+            mAppArguments = serviceProvider.GetService<ArgumentsParserService>();
 
             Register();
             Subscribe();

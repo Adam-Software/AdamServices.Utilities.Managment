@@ -20,8 +20,8 @@
     <None Remove="Extensions\**" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AdamServices.Extensions.DefaultArgumets" Version="0.0.3" />
     <PackageReference Include="AdamServices.Extensions.ServiceFileCreator" Version="0.1.6" />
-    <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
