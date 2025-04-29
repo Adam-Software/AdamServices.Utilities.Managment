@@ -5,9 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using File = System.IO.File;
 
@@ -80,6 +83,14 @@ namespace Managment.Services.Common
             OnRaiseDownloadSourceFinishedEvent();
         }
 
+        public async Task DownloadRelease()
+        {
+            //DirectoryUtilites.CreateOrClearDirectory(mBuildDirrectory);
+            DirectoryUtilites.CreateOrClearDirectory(mDownloadDirrectory);
+
+            await DownloadZipFromReleaseAsync();
+        }
+
         //public async Task DownloadUpdate()
         //{
             //await ReadServiceUpdateFile();
@@ -134,6 +145,54 @@ namespace Managment.Services.Common
             }
 
             mLogger.LogInformation("=== Download Zip From Repository Finished ===");
+        }
+
+        private async Task DownloadZipFromReleaseAsync()
+        {
+            mLogger.LogInformation("=== Download Zip From Release Start ===");
+
+            ServiceRepositories serviceRepositories = await mTempFileWorkerService.ReadTempFileAsync();
+
+            try
+            {
+                foreach (RepositoriesBaseInfo serviceBaseInfo in serviceRepositories.ServiceFilesContent)
+                {
+                    Release latestRelease = await mGitHubClient.Repository.Release.GetLatest(serviceBaseInfo.RepositoriesOwner, serviceBaseInfo.RepositoriesName);
+                    IReadOnlyList<ReleaseAsset> assets = latestRelease.Assets;
+
+                    using var httpClient = new HttpClient();
+                    foreach (ReleaseAsset asset in assets)
+                    {
+                        var isWindows = OperatingSystem.IsWindows();
+
+                        string[] releaseParts = asset.Name.Split('.');
+                        int osParts = releaseParts.Length;
+                        string osRelease = releaseParts[osParts - 3];
+
+                        if(isWindows) 
+                            if(!osRelease.Equals("win64"))
+                                continue;
+
+                        if(!isWindows)
+                            if (!osRelease.Equals("arm64"))
+                                continue;
+
+                        mLogger.LogInformation("Dowload release asset {assetName} for os {osRelease} started", asset.Name, osRelease);
+                        var assetBytes = await httpClient.GetByteArrayAsync(asset.BrowserDownloadUrl);
+
+                        string fileName = asset.Name;
+                        string downloadPath = Path.Combine(mDownloadDirrectory, fileName);
+                        await File.WriteAllBytesAsync(downloadPath, assetBytes);
+                        mLogger.LogInformation("Dowload release asset {assetName} finished", asset.Name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+
+            mLogger.LogInformation("=== Download Zip From Release Finished ===");
         }
 
         private async Task ExtractSourceFiles()

@@ -29,7 +29,6 @@ namespace Managment.Services.Common
 
         #endregion
 
-
         #region Public fields
 
         private readonly GitHubClient mGitHubClient;

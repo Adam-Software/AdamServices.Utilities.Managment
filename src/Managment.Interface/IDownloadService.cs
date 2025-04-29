@@ -12,6 +12,7 @@ namespace Managment.Interface
         public event DownloadSourceFinishedEventHandler RaiseDownloadSourceFinishedEvent;
 
         public Task DownloadSource();
+        public Task DownloadRelease();
         //public Task DownloadUpdate();
     }
 }

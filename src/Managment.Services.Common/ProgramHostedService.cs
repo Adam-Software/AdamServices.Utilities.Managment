@@ -172,10 +172,15 @@ namespace Managment.Services.Common
             {
                 mLogger.LogInformation("The application is running in installation mode");
 
-                mUpdateService.DownloadUpdateFileAsync().Wait(CancellationToken.None);
-                mDownloadService.DownloadSource().Wait(CancellationToken.None);
-                mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
-                
+
+                /* Install mode
+                 * mUpdateService.DownloadUpdateFileAsync().Wait(CancellationToken.None);
+                 * mDownloadService.DownloadSource().Wait(CancellationToken.None);
+                 * mDotnetService.PublishAsync(mCancellationSource.Token).Wait(CancellationToken.None);
+                 */
+
+                mDownloadService.DownloadRelease().Wait(CancellationToken.None);
+
                 return Task.CompletedTask;
             }
 
