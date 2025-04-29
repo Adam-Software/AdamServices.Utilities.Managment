@@ -15,6 +15,7 @@ on:
 env:
   VERSION: 1.0.0
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  PROJECT_NAME: Managment
 
 jobs:
   build:
@@ -37,22 +38,22 @@ jobs:
         
     - name: Publish
       run: | 
-        dotnet publish src/Managment --output publish/arm64 -c Release --self-contained true --runtime linux-arm64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
-        dotnet publish src/Managment --output publish/win64 -c Release --self-contained true --runtime win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
+        dotnet publish src/$PROJECT_NAME --output publish/arm64 -c Release --self-contained true --runtime linux-arm64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
+        dotnet publish src/$PROJECT_NAME --output publish/win64 -c Release --self-contained true --runtime win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=$VERSION 
   
     - name: Zip arm64 release
       uses: vimtor/action-zip@v1.2
       with:
         files: publish/arm64
         recursive: true
-        dest: Managment.arm64.portable.zip
+        dest: "${{ env.PROJECT_NAME }}.arm64.portable.zip"
     
     - name: Zip win64 release
       uses: vimtor/action-zip@v1.2
       with:
         files: publish/win64
         recursive: true
-        dest: Managment.win64.portable.zip
+        dest: "${{ env.PROJECT_NAME }}.win64.portable.zip"
 
     - name: Publish Release
       uses: "slord399/action-automatic-releases@v1.0.1"
