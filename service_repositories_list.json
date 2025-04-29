@@ -10,5 +10,17 @@
 		 * Optional. Default path /service_info.json
 		 */
 		"serviceFilePath": ""
+	},
+	{
+		/* User or organization */
+		"repositoriesOwner": "Adam-Software",
+
+		/* Repository name */
+		"repositoriesName": "AdamServices.CheckingAvailability",
+
+		/* Service info file path.
+		 * Optional. Default path /service_info.json
+		 */
+		"serviceFilePath": ""
 	}
 ]
