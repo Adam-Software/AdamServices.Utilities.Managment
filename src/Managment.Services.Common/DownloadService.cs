@@ -11,6 +11,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using File = System.IO.File;
 
@@ -38,6 +39,7 @@ namespace Managment.Services.Common
         private readonly GitHubClient mGitHubClient;
         private readonly string mDownloadDirrectory;
         private readonly string mBuildDirrectory;
+        private readonly string mPublishDirrectory;
 
         #endregion
 
@@ -61,6 +63,9 @@ namespace Managment.Services.Common
 
             string buildDirrectory = Path.Combine(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.BuildDirrectory);
             mBuildDirrectory = new DirectoryInfo(buildDirrectory).FullName;
+
+            string publishDirrectory = Path.Combine(mAppSettingsOptionsService.WorkingDirrectory, CommonFilesAndDirectoriesNames.PublishDirrectory);
+            mPublishDirrectory = new DirectoryInfo(publishDirrectory).FullName;
 
             mLogger.LogInformation("=== DownloadService. Start ===");
         }
@@ -89,6 +94,8 @@ namespace Managment.Services.Common
             DirectoryUtilites.CreateOrClearDirectory(mDownloadDirrectory);
 
             await DownloadZipFromReleaseAsync();
+            //await ExtractSourceFiles();
+            await ExtractPublishFiles();
         }
 
         //public async Task DownloadUpdate()
@@ -180,7 +187,7 @@ namespace Managment.Services.Common
                         mLogger.LogInformation("Dowload release asset {assetName} for os {osRelease} started", asset.Name, osRelease);
                         var assetBytes = await httpClient.GetByteArrayAsync(asset.BrowserDownloadUrl);
 
-                        string fileName = asset.Name;
+                        string fileName = $"{serviceBaseInfo.RepositoriesName}.zip"; 
                         string downloadPath = Path.Combine(mDownloadDirrectory, fileName);
                         await File.WriteAllBytesAsync(downloadPath, assetBytes);
                         mLogger.LogInformation("Dowload release asset {assetName} finished", asset.Name);
@@ -193,6 +200,36 @@ namespace Managment.Services.Common
             }
 
             mLogger.LogInformation("=== Download Zip From Release Finished ===");
+        }
+
+        private async Task ExtractPublishFiles()
+        {
+            mLogger.LogInformation("=== Extract Source Files Started ===");
+
+            try
+            {
+                ServiceRepositories serviceRepositories = await mTempFileWorkerService.ReadTempFileAsync();
+
+                foreach (RepositoriesBaseInfo serviceBaseInfo in serviceRepositories.ServiceFilesContent)
+                {
+                    string filename = $"{serviceBaseInfo.RepositoriesName}.zip";
+                    string zipArchiveFilePath = Path.Combine(mDownloadDirrectory, filename);
+
+                    string extractPath = Path.Combine(mDownloadDirrectory, serviceBaseInfo.RepositoriesName);
+
+                    ZipArchive zipArchive = ZipFile.OpenRead(zipArchiveFilePath);
+                    zipArchive.ExtractToDirectory(extractPath, true);
+                    zipArchive.Dispose();
+
+                    mLogger.LogInformation("{zipArchiveFilePath} extracted to dirrectory {extractPath}", zipArchiveFilePath, extractPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError("{error}", ex.Message);
+            }
+
+            mLogger.LogInformation("=== Extract Source Files Finihed ===");
         }
 
         private async Task ExtractSourceFiles()
